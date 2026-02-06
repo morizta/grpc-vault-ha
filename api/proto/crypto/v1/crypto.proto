@@ -1,0 +1,275 @@
+syntax = "proto3";
+
+package crypto.v1;
+
+option go_package = "github.com/pocketsizefund/microservice-vault/api/proto/crypto/v1;cryptov1";
+
+import "common/v1/common.proto";
+
+// CryptoService provides cryptographic operations
+service CryptoService {
+    // Encryption Operations
+    rpc Encrypt(EncryptRequest) returns (EncryptResponse);
+    rpc Decrypt(DecryptRequest) returns (DecryptResponse);
+    rpc EncryptBatch(EncryptBatchRequest) returns (EncryptBatchResponse);
+    rpc DecryptBatch(DecryptBatchRequest) returns (DecryptBatchResponse);
+
+    // Signing Operations
+    rpc Sign(SignRequest) returns (SignResponse);
+    rpc Verify(VerifyRequest) returns (VerifyResponse);
+    rpc SignBatch(SignBatchRequest) returns (SignBatchResponse);
+
+    // HMAC Operations
+    rpc GenerateHMAC(HMACRequest) returns (HMACResponse);
+    rpc VerifyHMAC(VerifyHMACRequest) returns (VerifyHMACResponse);
+
+    // Data Key Operations (for envelope encryption)
+    rpc GenerateDataKey(GenerateDataKeyRequest) returns (GenerateDataKeyResponse);
+    rpc DecryptDataKey(DecryptDataKeyRequest) returns (DecryptDataKeyResponse);
+
+    // Key Re-encryption
+    rpc Rewrap(RewrapRequest) returns (RewrapResponse);
+    rpc RewrapBatch(RewrapBatchRequest) returns (RewrapBatchResponse);
+
+    // Hash Operations
+    rpc Hash(HashRequest) returns (HashResponse);
+
+    // Random Generation
+    rpc GenerateRandom(GenerateRandomRequest) returns (GenerateRandomResponse);
+}
+
+// ============= Encryption Messages =============
+
+message EncryptRequest {
+    string key_name = 1;
+    bytes plaintext = 2;
+    bytes context = 3;              // Additional authenticated data (AAD)
+    int32 key_version = 4;          // 0 = latest
+    string nonce = 5;               // Optional: for convergent encryption
+}
+
+message EncryptResponse {
+    string ciphertext = 1;          // Format: "vault:v{version}:{base64}"
+    int32 key_version = 2;
+}
+
+message DecryptRequest {
+    string key_name = 1;
+    string ciphertext = 2;
+    bytes context = 3;              // Must match encryption context
+}
+
+message DecryptResponse {
+    bytes plaintext = 1;
+    int32 key_version = 2;
+}
+
+message EncryptBatchRequest {
+    string key_name = 1;
+    repeated BatchEncryptItem items = 2;
+}
+
+message BatchEncryptItem {
+    bytes plaintext = 1;
+    bytes context = 2;
+    string reference = 3;           // Correlation ID for response
+    string nonce = 4;               // Optional: for convergent encryption
+}
+
+message EncryptBatchResponse {
+    repeated BatchEncryptResult results = 1;
+}
+
+message BatchEncryptResult {
+    string ciphertext = 1;
+    int32 key_version = 2;
+    string reference = 3;
+    string error = 4;               // Empty if success
+}
+
+message DecryptBatchRequest {
+    string key_name = 1;
+    repeated BatchDecryptItem items = 2;
+}
+
+message BatchDecryptItem {
+    string ciphertext = 1;
+    bytes context = 2;
+    string reference = 3;
+}
+
+message DecryptBatchResponse {
+    repeated BatchDecryptResult results = 1;
+}
+
+message BatchDecryptResult {
+    bytes plaintext = 1;
+    int32 key_version = 2;
+    string reference = 3;
+    string error = 4;
+}
+
+// ============= Signing Messages =============
+
+message SignRequest {
+    string key_name = 1;
+    bytes data = 2;
+    common.v1.HashAlgorithm hash_algorithm = 3;
+    common.v1.SignatureAlgorithm signature_algorithm = 4;
+    bool prehashed = 5;             // True if data is already hashed
+    int32 key_version = 6;          // 0 = latest
+}
+
+message SignResponse {
+    bytes signature = 1;
+    int32 key_version = 2;
+}
+
+message VerifyRequest {
+    string key_name = 1;
+    bytes data = 2;
+    bytes signature = 3;
+    common.v1.HashAlgorithm hash_algorithm = 4;
+    common.v1.SignatureAlgorithm signature_algorithm = 5;
+    bool prehashed = 6;
+    int32 key_version = 7;          // 0 = try all versions
+}
+
+message VerifyResponse {
+    bool valid = 1;
+    int32 key_version = 2;
+}
+
+message SignBatchRequest {
+    string key_name = 1;
+    common.v1.HashAlgorithm hash_algorithm = 2;
+    common.v1.SignatureAlgorithm signature_algorithm = 3;
+    repeated BatchSignItem items = 4;
+}
+
+message BatchSignItem {
+    bytes data = 1;
+    string reference = 2;
+    bool prehashed = 3;
+}
+
+message SignBatchResponse {
+    repeated BatchSignResult results = 1;
+}
+
+message BatchSignResult {
+    bytes signature = 1;
+    int32 key_version = 2;
+    string reference = 3;
+    string error = 4;
+}
+
+// ============= HMAC Messages =============
+
+message HMACRequest {
+    string key_name = 1;
+    bytes data = 2;
+    common.v1.HashAlgorithm algorithm = 3;
+    int32 key_version = 4;
+}
+
+message HMACResponse {
+    bytes hmac = 1;
+    int32 key_version = 2;
+}
+
+message VerifyHMACRequest {
+    string key_name = 1;
+    bytes data = 2;
+    bytes hmac = 3;
+    common.v1.HashAlgorithm algorithm = 4;
+    int32 key_version = 5;          // 0 = try all versions
+}
+
+message VerifyHMACResponse {
+    bool valid = 1;
+    int32 key_version = 2;
+}
+
+// ============= Data Key Messages =============
+
+message GenerateDataKeyRequest {
+    string key_name = 1;            // KEK (Key Encryption Key) name
+    int32 key_bits = 2;             // 128 or 256
+    bytes context = 3;              // AAD for wrapping
+}
+
+message GenerateDataKeyResponse {
+    bytes plaintext_key = 1;        // Use this for local encryption
+    string encrypted_key = 2;       // Store this alongside encrypted data
+    int32 key_version = 3;
+}
+
+message DecryptDataKeyRequest {
+    string key_name = 1;
+    string encrypted_key = 2;
+    bytes context = 3;
+}
+
+message DecryptDataKeyResponse {
+    bytes plaintext_key = 1;
+    int32 key_version = 2;
+}
+
+// ============= Rewrap Messages =============
+
+message RewrapRequest {
+    string key_name = 1;
+    string ciphertext = 2;
+    bytes context = 3;
+}
+
+message RewrapResponse {
+    string ciphertext = 1;          // Re-encrypted with latest key version
+    int32 key_version = 2;
+}
+
+message RewrapBatchRequest {
+    string key_name = 1;
+    repeated BatchRewrapItem items = 2;
+}
+
+message BatchRewrapItem {
+    string ciphertext = 1;
+    bytes context = 2;
+    string reference = 3;
+}
+
+message RewrapBatchResponse {
+    repeated BatchRewrapResult results = 1;
+}
+
+message BatchRewrapResult {
+    string ciphertext = 1;
+    int32 key_version = 2;
+    string reference = 3;
+    string error = 4;
+}
+
+// ============= Hash Messages =============
+
+message HashRequest {
+    bytes data = 1;
+    common.v1.HashAlgorithm algorithm = 2;
+    string format = 3;              // "hex" or "base64" (default: base64)
+}
+
+message HashResponse {
+    string hash = 1;
+}
+
+// ============= Random Messages =============
+
+message GenerateRandomRequest {
+    int32 bytes = 1;                // Number of random bytes
+    string format = 2;              // "hex" or "base64" (default: base64)
+}
+
+message GenerateRandomResponse {
+    string data = 1;
+}

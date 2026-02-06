@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/pocketsizefund/microservice-vault/api/proto/common/v1;commonv1";
+
+// Standard error response
+message Error {
+    int32 code = 1;
+    string message = 2;
+    map<string, string> details = 3;
+}
+
+// Pagination request
+message PaginationRequest {
+    int32 page_size = 1;
+    string page_token = 2;
+}
+
+// Pagination response
+message PaginationResponse {
+    string next_page_token = 1;
+    int32 total_count = 2;
+}
+
+// Key type enumeration
+enum KeyType {
+    KEY_TYPE_UNSPECIFIED = 0;
+    KEY_TYPE_AES256_GCM = 1;
+    KEY_TYPE_CHACHA20_POLY1305 = 2;
+    KEY_TYPE_RSA_2048 = 3;
+    KEY_TYPE_RSA_4096 = 4;
+    KEY_TYPE_ECDSA_P256 = 5;
+    KEY_TYPE_ECDSA_P384 = 6;
+    KEY_TYPE_ED25519 = 7;
+    KEY_TYPE_FPE_FF1 = 8;
+}
+
+// Hash algorithm enumeration
+enum HashAlgorithm {
+    HASH_ALGORITHM_UNSPECIFIED = 0;
+    HASH_ALGORITHM_SHA256 = 1;
+    HASH_ALGORITHM_SHA384 = 2;
+    HASH_ALGORITHM_SHA512 = 3;
+}
+
+// Signature algorithm enumeration
+enum SignatureAlgorithm {
+    SIGNATURE_ALGORITHM_UNSPECIFIED = 0;
+    SIGNATURE_ALGORITHM_ECDSA = 1;
+    SIGNATURE_ALGORITHM_ED25519 = 2;
+    SIGNATURE_ALGORITHM_RSA_PSS = 3;
+    SIGNATURE_ALGORITHM_RSA_PKCS1 = 4;
+}
+
+// Metadata for audit purposes
+message RequestMetadata {
+    string request_id = 1;
+    string client_ip = 2;
+    string user_agent = 3;
+    int64 timestamp = 4;
+}

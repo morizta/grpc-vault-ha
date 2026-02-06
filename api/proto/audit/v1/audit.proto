@@ -1,0 +1,234 @@
+syntax = "proto3";
+
+package audit.v1;
+
+option go_package = "github.com/pocketsizefund/microservice-vault/api/proto/audit/v1;auditv1";
+
+import "common/v1/common.proto";
+
+// AuditService provides audit logging and querying
+service AuditService {
+    // Query Operations
+    rpc SearchAuditLogs(SearchAuditLogsRequest) returns (SearchAuditLogsResponse);
+    rpc GetAuditLog(GetAuditLogRequest) returns (AuditLog);
+    rpc GetStatistics(GetStatisticsRequest) returns (Statistics);
+
+    // Export Operations
+    rpc ExportLogs(ExportLogsRequest) returns (stream ExportChunk);
+
+    // Internal: Receive audit events from other services
+    rpc LogEvent(LogEventRequest) returns (LogEventResponse);
+    rpc LogEventBatch(LogEventBatchRequest) returns (LogEventResponse);
+}
+
+// ============= Audit Event Messages =============
+
+message AuditEvent {
+    string event_id = 1;
+    string timestamp = 2;           // RFC3339 format
+
+    // Source information
+    string service = 3;             // auth, crypto, tokenize, lock, gateway
+    string operation = 4;           // encrypt, decrypt, get_secret, etc.
+
+    // Actor information
+    string identity = 5;            // Who performed the action
+    string token_id = 6;
+    string source_ip = 7;
+    string user_agent = 8;
+
+    // Resource information
+    string resource = 9;            // What was accessed
+    string resource_type = 10;      // key, secret, policy, token
+
+    // Result
+    bool success = 11;
+    string error_code = 12;
+    string error_message = 13;
+
+    // Additional context
+    map<string, string> metadata = 14;
+
+    // Request/Response (sensitive data redacted)
+    AuditRequest request = 15;
+    AuditResponse response = 16;
+}
+
+message AuditRequest {
+    string path = 1;
+    string operation = 2;
+    map<string, string> headers = 3;
+    string body_hash = 4;           // Hash of request body (not actual content)
+}
+
+message AuditResponse {
+    int32 status_code = 1;
+    string error = 2;
+    string body_hash = 3;
+}
+
+message AuditLog {
+    string log_id = 1;
+    AuditEvent event = 2;
+    string stored_at = 3;
+    string storage_location = 4;    // s3://bucket/path
+}
+
+// ============= Search Messages =============
+
+message SearchAuditLogsRequest {
+    // Filters
+    string service = 1;
+    string operation = 2;
+    string identity = 3;
+    string resource = 4;
+    string resource_type = 5;
+
+    // Time range
+    int64 start_time = 6;           // Unix timestamp
+    int64 end_time = 7;             // Unix timestamp
+
+    // Result filters
+    bool success_only = 8;
+    bool failure_only = 9;
+
+    // Pagination
+    int32 limit = 10;
+    string cursor = 11;
+
+    // Sort
+    string sort_by = 12;            // "timestamp", "service", "operation"
+    bool sort_desc = 13;            // Default: true (newest first)
+}
+
+message SearchAuditLogsResponse {
+    repeated AuditLog logs = 1;
+    string next_cursor = 2;
+    int64 total_count = 3;
+}
+
+message GetAuditLogRequest {
+    string event_id = 1;
+}
+
+// ============= Statistics Messages =============
+
+message GetStatisticsRequest {
+    // Time range
+    int64 start_time = 1;
+    int64 end_time = 2;
+
+    // Group by
+    string group_by = 3;            // "service", "operation", "identity", "hour", "day"
+
+    // Filters
+    string service = 4;
+    string operation = 5;
+}
+
+message Statistics {
+    int64 total_events = 1;
+    int64 successful_events = 2;
+    int64 failed_events = 3;
+
+    repeated StatisticsBucket buckets = 4;
+
+    map<string, int64> by_service = 5;
+    map<string, int64> by_operation = 6;
+    map<string, int64> by_identity = 7;
+}
+
+message StatisticsBucket {
+    string key = 1;                 // e.g., "2024-01-15" or "crypto"
+    int64 count = 2;
+    int64 success_count = 3;
+    int64 failure_count = 4;
+}
+
+// ============= Export Messages =============
+
+message ExportLogsRequest {
+    // Filters (same as search)
+    string service = 1;
+    string operation = 2;
+    string identity = 3;
+    int64 start_time = 4;
+    int64 end_time = 5;
+
+    // Export options
+    ExportFormat format = 6;
+    bool include_request = 7;
+    bool include_response = 8;
+}
+
+enum ExportFormat {
+    EXPORT_FORMAT_UNSPECIFIED = 0;
+    EXPORT_FORMAT_JSON = 1;
+    EXPORT_FORMAT_CSV = 2;
+    EXPORT_FORMAT_PARQUET = 3;
+}
+
+message ExportChunk {
+    bytes data = 1;
+    int32 chunk_number = 2;
+    bool is_last = 3;
+    int64 total_records = 4;
+}
+
+// ============= Internal Logging Messages =============
+
+message LogEventRequest {
+    AuditEvent event = 1;
+}
+
+message LogEventBatchRequest {
+    repeated AuditEvent events = 1;
+}
+
+message LogEventResponse {
+    bool success = 1;
+    int32 logged_count = 2;
+    int32 failed_count = 3;
+    repeated string failed_event_ids = 4;
+}
+
+// ============= Alert Configuration =============
+
+message AlertRule {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+
+    // Conditions
+    AlertCondition condition = 4;
+
+    // Actions
+    repeated AlertAction actions = 5;
+
+    bool enabled = 6;
+    int64 created_at = 7;
+}
+
+message AlertCondition {
+    string service = 1;
+    string operation = 2;
+    bool on_failure = 3;
+    int32 threshold = 4;            // e.g., 10 failures in window
+    int64 window_seconds = 5;       // e.g., 60 seconds
+    string identity_pattern = 6;    // Regex pattern
+    string resource_pattern = 7;
+}
+
+message AlertAction {
+    AlertActionType type = 1;
+    string target = 2;              // email, webhook URL, slack channel
+    string template = 3;
+}
+
+enum AlertActionType {
+    ALERT_ACTION_TYPE_UNSPECIFIED = 0;
+    ALERT_ACTION_TYPE_EMAIL = 1;
+    ALERT_ACTION_TYPE_WEBHOOK = 2;
+    ALERT_ACTION_TYPE_SLACK = 3;
+    ALERT_ACTION_TYPE_PAGERDUTY = 4;
+}

@@ -1,0 +1,305 @@
+syntax = "proto3";
+
+package lock.v1;
+
+option go_package = "github.com/pocketsizefund/microservice-vault/api/proto/lock/v1;lockv1";
+
+import "common/v1/common.proto";
+
+// LockService provides secret storage and key management
+service LockService {
+    // Secret Operations
+    rpc GetSecret(GetSecretRequest) returns (GetSecretResponse);
+    rpc PutSecret(PutSecretRequest) returns (PutSecretResponse);
+    rpc DeleteSecret(DeleteSecretRequest) returns (DeleteSecretResponse);
+    rpc ListSecrets(ListSecretsRequest) returns (ListSecretsResponse);
+    rpc GetSecretMetadata(GetSecretMetadataRequest) returns (GetSecretMetadataResponse);
+
+    // Key Operations
+    rpc CreateKey(CreateKeyRequest) returns (CreateKeyResponse);
+    rpc GetKey(GetKeyRequest) returns (GetKeyResponse);
+    rpc DeleteKey(DeleteKeyRequest) returns (DeleteKeyResponse);
+    rpc ListKeys(ListKeysRequest) returns (ListKeysResponse);
+    rpc RotateKey(RotateKeyRequest) returns (RotateKeyResponse);
+    rpc UpdateKeyConfig(UpdateKeyConfigRequest) returns (UpdateKeyConfigResponse);
+    rpc GetKeyVersions(GetKeyVersionsRequest) returns (GetKeyVersionsResponse);
+
+    // Internal: Used by Crypto/Tokenize services
+    rpc GetEncryptionKey(GetEncryptionKeyRequest) returns (GetEncryptionKeyResponse);
+
+    // Seal Operations
+    rpc GetSealStatus(GetSealStatusRequest) returns (SealStatus);
+    rpc Initialize(InitializeRequest) returns (InitializeResponse);
+    rpc Unseal(UnsealRequest) returns (SealStatus);
+    rpc Seal(SealRequest) returns (SealStatus);
+
+    // Cluster Operations
+    rpc GetLeader(GetLeaderRequest) returns (GetLeaderResponse);
+    rpc JoinCluster(JoinClusterRequest) returns (JoinClusterResponse);
+    rpc LeaveCluster(LeaveClusterRequest) returns (LeaveClusterResponse);
+    rpc GetClusterStatus(GetClusterStatusRequest) returns (ClusterStatus);
+}
+
+// ============= Secret Messages =============
+
+message GetSecretRequest {
+    string path = 1;
+    int32 version = 2;              // 0 = latest
+}
+
+message GetSecretResponse {
+    map<string, bytes> data = 1;
+    SecretMetadata metadata = 2;
+}
+
+message SecretMetadata {
+    string path = 1;
+    int32 version = 2;
+    int32 current_version = 3;
+    int32 oldest_version = 4;
+    int64 created_at = 5;
+    int64 updated_at = 6;
+    int64 deleted_at = 7;
+    bool destroyed = 8;
+    map<string, string> custom_metadata = 9;
+}
+
+message PutSecretRequest {
+    string path = 1;
+    map<string, bytes> data = 2;
+    int32 cas = 3;                  // Check-and-set: must match current version
+    map<string, string> custom_metadata = 4;
+}
+
+message PutSecretResponse {
+    int32 version = 1;
+    int64 created_at = 2;
+}
+
+message DeleteSecretRequest {
+    string path = 1;
+    repeated int32 versions = 2;    // Empty = soft delete latest
+    bool permanent = 3;             // Destroy instead of soft delete
+}
+
+message DeleteSecretResponse {
+    bool success = 1;
+}
+
+message ListSecretsRequest {
+    string path_prefix = 1;
+    common.v1.PaginationRequest pagination = 2;
+}
+
+message ListSecretsResponse {
+    repeated string keys = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message GetSecretMetadataRequest {
+    string path = 1;
+}
+
+message GetSecretMetadataResponse {
+    SecretMetadata metadata = 1;
+    repeated SecretVersionMetadata versions = 2;
+}
+
+message SecretVersionMetadata {
+    int32 version = 1;
+    int64 created_at = 2;
+    int64 deleted_at = 3;
+    bool destroyed = 4;
+}
+
+// ============= Key Messages =============
+
+message CreateKeyRequest {
+    string name = 1;
+    common.v1.KeyType type = 2;
+    bool exportable = 3;
+    bool allow_plaintext_backup = 4;
+    bool derived = 5;               // Support key derivation
+    bool convergent_encryption = 6;
+    int32 min_decryption_version = 7;
+    int32 min_encryption_version = 8;
+    int64 auto_rotate_period = 9;   // Seconds, 0 = disabled
+}
+
+message CreateKeyResponse {
+    string name = 1;
+    common.v1.KeyType type = 2;
+    int32 latest_version = 3;
+    int64 created_at = 4;
+}
+
+message GetKeyRequest {
+    string name = 1;
+}
+
+message GetKeyResponse {
+    string name = 1;
+    common.v1.KeyType type = 2;
+    int32 latest_version = 3;
+    int32 min_decryption_version = 4;
+    int32 min_encryption_version = 5;
+    bool exportable = 6;
+    bool derived = 7;
+    bool convergent_encryption = 8;
+    int64 auto_rotate_period = 9;
+    int64 created_at = 10;
+    int64 updated_at = 11;
+}
+
+message DeleteKeyRequest {
+    string name = 1;
+}
+
+message DeleteKeyResponse {
+    bool success = 1;
+}
+
+message ListKeysRequest {
+    common.v1.PaginationRequest pagination = 1;
+}
+
+message ListKeysResponse {
+    repeated string keys = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message RotateKeyRequest {
+    string name = 1;
+}
+
+message RotateKeyResponse {
+    int32 new_version = 1;
+    int64 rotated_at = 2;
+}
+
+message UpdateKeyConfigRequest {
+    string name = 1;
+    int32 min_decryption_version = 2;
+    int32 min_encryption_version = 3;
+    bool deletion_allowed = 4;
+    bool exportable = 5;
+    int64 auto_rotate_period = 6;
+}
+
+message UpdateKeyConfigResponse {
+    bool success = 1;
+}
+
+message GetKeyVersionsRequest {
+    string name = 1;
+}
+
+message GetKeyVersionsResponse {
+    string name = 1;
+    common.v1.KeyType type = 2;
+    repeated KeyVersion versions = 3;
+}
+
+message KeyVersion {
+    int32 version = 1;
+    int64 created_at = 2;
+    bytes public_key = 3;           // For asymmetric keys only
+}
+
+// Internal: Get encryption key material
+message GetEncryptionKeyRequest {
+    string name = 1;
+    int32 version = 2;              // 0 = latest
+}
+
+message GetEncryptionKeyResponse {
+    bytes key = 1;                  // Decrypted key material
+    int32 version = 2;
+    common.v1.KeyType type = 3;
+    bytes public_key = 4;           // For asymmetric keys
+}
+
+// ============= Seal Messages =============
+
+message GetSealStatusRequest {}
+
+message SealStatus {
+    bool sealed = 1;
+    bool initialized = 2;
+    int32 threshold = 3;            // Shamir threshold
+    int32 shares = 4;               // Total Shamir shares
+    int32 progress = 5;             // Unseal progress
+    string seal_type = 6;           // "shamir" or "awskms", etc.
+    string cluster_id = 7;
+    string cluster_name = 8;
+    string version = 9;
+}
+
+message InitializeRequest {
+    int32 secret_shares = 1;        // Number of Shamir shares
+    int32 secret_threshold = 2;     // Required shares to unseal
+    repeated string pgp_keys = 3;   // Optional: PGP keys to encrypt shares
+    string root_token_pgp_key = 4;  // Optional: PGP key for root token
+    repeated string recovery_keys = 5; // For auto-seal
+    int32 recovery_shares = 6;
+    int32 recovery_threshold = 7;
+}
+
+message InitializeResponse {
+    repeated string keys = 1;           // Shamir shares (base64)
+    repeated string keys_base64 = 2;    // Same as keys
+    repeated string root_tokens = 3;
+    repeated string recovery_keys = 4;
+    repeated string recovery_keys_base64 = 5;
+}
+
+message UnsealRequest {
+    string key = 1;                 // One Shamir share
+    bool reset = 2;                 // Reset unseal progress
+}
+
+message SealRequest {
+    // No parameters - just seal
+}
+
+// ============= Cluster Messages =============
+
+message GetLeaderRequest {}
+
+message GetLeaderResponse {
+    string leader_address = 1;
+    bool is_self = 2;
+}
+
+message JoinClusterRequest {
+    string leader_address = 1;
+    bool non_voter = 2;             // Join as non-voting member
+}
+
+message JoinClusterResponse {
+    bool success = 1;
+    string node_id = 2;
+}
+
+message LeaveClusterRequest {}
+
+message LeaveClusterResponse {
+    bool success = 1;
+}
+
+message GetClusterStatusRequest {}
+
+message ClusterStatus {
+    string cluster_id = 1;
+    string cluster_name = 2;
+    string leader_address = 3;
+    repeated ClusterNode nodes = 4;
+}
+
+message ClusterNode {
+    string node_id = 1;
+    string address = 2;
+    string state = 3;               // "leader", "follower", "candidate"
+    bool voter = 4;
+    int64 last_contact = 5;
+}

@@ -1,0 +1,213 @@
+syntax = "proto3";
+
+package tokenize.v1;
+
+option go_package = "github.com/pocketsizefund/microservice-vault/api/proto/tokenize/v1;tokenizev1";
+
+// TokenizeService provides tokenization and format-preserving encryption
+service TokenizeService {
+    // FPE Operations (Stateless - Format-Preserving Encryption)
+    rpc FPEEncrypt(FPEEncryptRequest) returns (FPEEncryptResponse);
+    rpc FPEDecrypt(FPEDecryptRequest) returns (FPEDecryptResponse);
+    rpc FPEEncryptBatch(FPEBatchRequest) returns (FPEBatchResponse);
+    rpc FPEDecryptBatch(FPEBatchRequest) returns (FPEBatchResponse);
+
+    // Masking Operations
+    rpc Mask(MaskRequest) returns (MaskResponse);
+    rpc MaskBatch(MaskBatchRequest) returns (MaskBatchResponse);
+
+    // Transformation Management
+    rpc ListTransformations(ListTransformationsRequest) returns (ListTransformationsResponse);
+    rpc GetTransformation(GetTransformationRequest) returns (Transformation);
+    rpc CreateTransformation(CreateTransformationRequest) returns (CreateTransformationResponse);
+    rpc DeleteTransformation(DeleteTransformationRequest) returns (DeleteTransformationResponse);
+}
+
+// ============= FPE Messages =============
+
+message FPEEncryptRequest {
+    string key_name = 1;
+    string plaintext = 2;
+    string transformation = 3;      // e.g., "credit-card", "ssn", "phone"
+    bytes tweak = 4;                // Optional context/nonce
+
+    // Alternative: custom alphabet (if transformation not specified)
+    string alphabet = 5;            // e.g., "0123456789"
+}
+
+message FPEEncryptResponse {
+    string ciphertext = 1;          // Same format as plaintext
+    int32 key_version = 2;
+}
+
+message FPEDecryptRequest {
+    string key_name = 1;
+    string ciphertext = 2;
+    string transformation = 3;
+    bytes tweak = 4;
+    string alphabet = 5;
+    int32 key_version = 6;          // 0 = try to detect
+}
+
+message FPEDecryptResponse {
+    string plaintext = 1;
+    int32 key_version = 2;
+}
+
+message FPEBatchRequest {
+    string key_name = 1;
+    string transformation = 2;
+    string alphabet = 3;
+    repeated FPEBatchItem items = 4;
+    bool is_decrypt = 5;            // True for decrypt, false for encrypt
+}
+
+message FPEBatchItem {
+    string value = 1;               // Plaintext or ciphertext
+    bytes tweak = 2;
+    string reference = 3;           // Correlation ID
+}
+
+message FPEBatchResponse {
+    repeated FPEBatchResult results = 1;
+}
+
+message FPEBatchResult {
+    string value = 1;               // Result (ciphertext or plaintext)
+    int32 key_version = 2;
+    string reference = 3;
+    string error = 4;               // Empty if success
+}
+
+// ============= Masking Messages =============
+
+message MaskRequest {
+    string value = 1;
+    string transformation = 2;      // e.g., "credit-card-mask"
+    MaskPattern pattern = 3;        // Or custom pattern
+}
+
+message MaskPattern {
+    int32 preserve_first = 1;       // Keep first N characters visible
+    int32 preserve_last = 2;        // Keep last N characters visible
+    string mask_char = 3;           // Masking character (default: "*")
+    repeated MaskRange ranges = 4;  // Custom ranges to mask
+}
+
+message MaskRange {
+    int32 start = 1;
+    int32 end = 2;
+    string mask_char = 3;
+}
+
+message MaskResponse {
+    string masked_value = 1;
+}
+
+message MaskBatchRequest {
+    string transformation = 1;
+    MaskPattern pattern = 2;
+    repeated MaskBatchItem items = 3;
+}
+
+message MaskBatchItem {
+    string value = 1;
+    string reference = 2;
+}
+
+message MaskBatchResponse {
+    repeated MaskBatchResult results = 1;
+}
+
+message MaskBatchResult {
+    string masked_value = 1;
+    string reference = 2;
+    string error = 3;
+}
+
+// ============= Transformation Messages =============
+
+message Transformation {
+    string name = 1;
+    string alphabet = 2;
+    TransformationType type = 3;
+    string pattern = 4;             // Regex for validation
+    string description = 5;
+    MaskPattern default_mask = 6;
+    int64 created_at = 7;
+}
+
+enum TransformationType {
+    TRANSFORMATION_TYPE_UNSPECIFIED = 0;
+    TRANSFORMATION_TYPE_NUMERIC = 1;
+    TRANSFORMATION_TYPE_ALPHA_LOWER = 2;
+    TRANSFORMATION_TYPE_ALPHA_UPPER = 3;
+    TRANSFORMATION_TYPE_ALPHANUMERIC = 4;
+    TRANSFORMATION_TYPE_CUSTOM = 5;
+}
+
+message ListTransformationsRequest {
+    // Empty - list all
+}
+
+message ListTransformationsResponse {
+    repeated Transformation transformations = 1;
+}
+
+message GetTransformationRequest {
+    string name = 1;
+}
+
+message CreateTransformationRequest {
+    string name = 1;
+    string alphabet = 2;
+    TransformationType type = 3;
+    string pattern = 4;
+    string description = 5;
+    MaskPattern default_mask = 6;
+}
+
+message CreateTransformationResponse {
+    Transformation transformation = 1;
+}
+
+message DeleteTransformationRequest {
+    string name = 1;
+}
+
+message DeleteTransformationResponse {
+    bool success = 1;
+}
+
+// ============= Built-in Transformations =============
+//
+// credit-card:
+//   alphabet: "0123456789"
+//   pattern: "^[0-9]{13,19}$"
+//   default_mask: preserve_first=0, preserve_last=4, mask_char="*"
+//
+// ssn:
+//   alphabet: "0123456789"
+//   pattern: "^[0-9]{9}$"
+//   default_mask: preserve_first=0, preserve_last=4, mask_char="*"
+//
+// phone:
+//   alphabet: "0123456789"
+//   pattern: "^[0-9]{10,15}$"
+//   default_mask: preserve_first=3, preserve_last=2, mask_char="*"
+//
+// numeric:
+//   alphabet: "0123456789"
+//   pattern: "^[0-9]+$"
+//
+// alpha-lower:
+//   alphabet: "abcdefghijklmnopqrstuvwxyz"
+//   pattern: "^[a-z]+$"
+//
+// alpha-upper:
+//   alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+//   pattern: "^[A-Z]+$"
+//
+// alphanumeric:
+//   alphabet: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+//   pattern: "^[a-zA-Z0-9]+$"

@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # Gateway Service
+  gateway:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    environment:
+      - GATEWAY_HTTP_PORT=8080
+      - GATEWAY_GRPC_PORT=9090
+      - AUTH_SERVICE_ADDRESS=auth:9091
+      - CRYPTO_SERVICE_ADDRESS=crypto:9092
+      - TOKENIZE_SERVICE_ADDRESS=tokenize:9093
+      - LOCK_SERVICE_ADDRESS=lock:9094
+      - AUDIT_SERVICE_ADDRESS=audit:9095
+      - REDIS_ADDRESS=redis:6379
+    depends_on:
+      - auth
+      - crypto
+      - tokenize
+      - lock
+      - audit
+      - redis
+    networks:
+      - vault-network
+
+  # Auth Service
+  auth:
+    build:
+      context: .
+      dockerfile: services/auth/Dockerfile
+    ports:
+      - "9091:9091"
+    environment:
+      - AUTH_GRPC_PORT=9091
+      - AUTH_DB_DSN=postgres://vault:vault@postgres:5432/vault_auth?sslmode=disable
+      - REDIS_ADDRESS=redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - vault-network
+
+  # Crypto Service
+  crypto:
+    build:
+      context: .
+      dockerfile: services/crypto/Dockerfile
+    ports:
+      - "9092:9092"
+    environment:
+      - CRYPTO_GRPC_PORT=9092
+      - LOCK_SERVICE_ADDRESS=lock:9094
+    depends_on:
+      - lock
+    networks:
+      - vault-network
+
+  # Tokenize Service
+  tokenize:
+    build:
+      context: .
+      dockerfile: services/tokenize/Dockerfile
+    ports:
+      - "9093:9093"
+    environment:
+      - TOKENIZE_GRPC_PORT=9093
+      - LOCK_SERVICE_ADDRESS=lock:9094
+    depends_on:
+      - lock
+    networks:
+      - vault-network
+
+  # Lock Service
+  lock:
+    build:
+      context: .
+      dockerfile: services/lock/Dockerfile
+    ports:
+      - "9094:9094"
+    environment:
+      - LOCK_GRPC_PORT=9094
+    volumes:
+      - lock-data:/var/lib/vault
+    networks:
+      - vault-network
+
+  # Audit Service
+  audit:
+    build:
+      context: .
+      dockerfile: services/audit/Dockerfile
+    ports:
+      - "9095:9095"
+    environment:
+      - AUDIT_GRPC_PORT=9095
+      - AUDIT_STORAGE_TYPE=file
+      - AUDIT_FILE_PATH=/var/log/vault/audit.log
+    volumes:
+      - audit-logs:/var/log/vault
+    networks:
+      - vault-network
+
+  # Infrastructure
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=vault
+      - POSTGRES_PASSWORD=vault
+      - POSTGRES_DB=vault_auth
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deployments/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - vault-network
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - vault-network
+
+networks:
+  vault-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  lock-data:
+  audit-logs:

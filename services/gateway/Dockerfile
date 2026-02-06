@@ -1,0 +1,23 @@
+# Build stage
+FROM golang:1.21-alpine AS builder
+
+WORKDIR /app
+
+RUN apk add --no-cache git ca-certificates
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /gateway-server ./services/gateway/cmd/server
+
+# Runtime stage
+FROM gcr.io/distroless/static-debian12
+
+COPY --from=builder /gateway-server /gateway-server
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+EXPOSE 8080 9090
+
+ENTRYPOINT ["/gateway-server"]

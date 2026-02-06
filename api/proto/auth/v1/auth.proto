@@ -1,0 +1,246 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/pocketsizefund/microservice-vault/api/proto/auth/v1;authv1";
+
+import "common/v1/common.proto";
+
+// AuthService handles authentication and authorization
+service AuthService {
+    // Token Operations
+    rpc CreateToken(CreateTokenRequest) returns (CreateTokenResponse);
+    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+    rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
+    rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+    rpc ListTokens(ListTokensRequest) returns (ListTokensResponse);
+
+    // API Key Operations
+    rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse);
+    rpc ValidateAPIKey(ValidateAPIKeyRequest) returns (ValidateAPIKeyResponse);
+    rpc RevokeAPIKey(RevokeAPIKeyRequest) returns (RevokeAPIKeyResponse);
+    rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse);
+
+    // Policy Operations
+    rpc CreatePolicy(CreatePolicyRequest) returns (CreatePolicyResponse);
+    rpc GetPolicy(GetPolicyRequest) returns (GetPolicyResponse);
+    rpc UpdatePolicy(UpdatePolicyRequest) returns (UpdatePolicyResponse);
+    rpc DeletePolicy(DeletePolicyRequest) returns (DeletePolicyResponse);
+    rpc ListPolicies(ListPoliciesRequest) returns (ListPoliciesResponse);
+    rpc EvaluatePolicy(EvaluatePolicyRequest) returns (EvaluatePolicyResponse);
+}
+
+// ============= Token Messages =============
+
+message CreateTokenRequest {
+    string identity = 1;
+    repeated string policies = 2;
+    int64 ttl_seconds = 3;
+    map<string, string> metadata = 4;
+}
+
+message CreateTokenResponse {
+    string token = 1;
+    string token_id = 2;
+    int64 expires_at = 3;
+    repeated string policies = 4;
+}
+
+message ValidateTokenRequest {
+    string token = 1;
+    string required_policy = 2;
+    string resource = 3;
+    string action = 4;
+}
+
+message ValidateTokenResponse {
+    bool valid = 1;
+    string identity = 2;
+    string token_id = 3;
+    repeated string policies = 4;
+    map<string, string> metadata = 5;
+    int64 expires_at = 6;
+    string error_message = 7;
+}
+
+message RevokeTokenRequest {
+    string token = 1;
+    string token_id = 2;
+}
+
+message RevokeTokenResponse {
+    bool success = 1;
+}
+
+message RefreshTokenRequest {
+    string token = 1;
+    int64 ttl_seconds = 2;
+}
+
+message RefreshTokenResponse {
+    string token = 1;
+    string token_id = 2;
+    int64 expires_at = 3;
+}
+
+message ListTokensRequest {
+    string identity = 1;
+    common.v1.PaginationRequest pagination = 2;
+}
+
+message ListTokensResponse {
+    repeated TokenInfo tokens = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message TokenInfo {
+    string token_id = 1;
+    string identity = 2;
+    repeated string policies = 3;
+    int64 created_at = 4;
+    int64 expires_at = 5;
+    int64 last_used_at = 6;
+}
+
+// ============= API Key Messages =============
+
+message CreateAPIKeyRequest {
+    string name = 1;
+    string identity = 2;
+    repeated string policies = 3;
+    int64 ttl_seconds = 4;
+    map<string, string> metadata = 5;
+}
+
+message CreateAPIKeyResponse {
+    string api_key = 1;
+    string key_id = 2;
+    int64 expires_at = 3;
+}
+
+message ValidateAPIKeyRequest {
+    string api_key = 1;
+    string resource = 2;
+    string action = 3;
+}
+
+message ValidateAPIKeyResponse {
+    bool valid = 1;
+    string identity = 2;
+    string key_id = 3;
+    repeated string policies = 4;
+    string error_message = 5;
+}
+
+message RevokeAPIKeyRequest {
+    string key_id = 1;
+}
+
+message RevokeAPIKeyResponse {
+    bool success = 1;
+}
+
+message ListAPIKeysRequest {
+    string identity = 1;
+    common.v1.PaginationRequest pagination = 2;
+}
+
+message ListAPIKeysResponse {
+    repeated APIKeyInfo api_keys = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message APIKeyInfo {
+    string key_id = 1;
+    string name = 2;
+    string identity = 3;
+    repeated string policies = 4;
+    int64 created_at = 5;
+    int64 expires_at = 6;
+    int64 last_used_at = 7;
+}
+
+// ============= Policy Messages =============
+
+message CreatePolicyRequest {
+    string name = 1;
+    repeated PolicyRule rules = 2;
+    string description = 3;
+}
+
+message CreatePolicyResponse {
+    string name = 1;
+    int64 created_at = 2;
+}
+
+message GetPolicyRequest {
+    string name = 1;
+}
+
+message GetPolicyResponse {
+    Policy policy = 1;
+}
+
+message UpdatePolicyRequest {
+    string name = 1;
+    repeated PolicyRule rules = 2;
+    string description = 3;
+}
+
+message UpdatePolicyResponse {
+    string name = 1;
+    int64 updated_at = 2;
+}
+
+message DeletePolicyRequest {
+    string name = 1;
+}
+
+message DeletePolicyResponse {
+    bool success = 1;
+}
+
+message ListPoliciesRequest {
+    common.v1.PaginationRequest pagination = 1;
+}
+
+message ListPoliciesResponse {
+    repeated Policy policies = 1;
+    common.v1.PaginationResponse pagination = 2;
+}
+
+message EvaluatePolicyRequest {
+    repeated string policies = 1;
+    string resource = 2;
+    string action = 3;
+    map<string, string> context = 4;
+}
+
+message EvaluatePolicyResponse {
+    bool allowed = 1;
+    string matched_rule = 2;
+    string denial_reason = 3;
+}
+
+// Policy definition
+message Policy {
+    string name = 1;
+    repeated PolicyRule rules = 2;
+    string description = 3;
+    int64 created_at = 4;
+    int64 updated_at = 5;
+}
+
+message PolicyRule {
+    string path = 1;
+    repeated string capabilities = 2;
+    map<string, string> conditions = 3;
+}
+
+// Capabilities
+// - create: Create new resources
+// - read: Read existing resources
+// - update: Update existing resources
+// - delete: Delete resources
+// - list: List resources
+// - sudo: Root access (bypass restrictions)

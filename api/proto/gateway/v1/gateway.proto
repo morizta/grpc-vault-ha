@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package gateway.v1;
+
+option go_package = "github.com/pocketsizefund/microservice-vault/api/proto/gateway/v1;gatewayv1";
+
+// GatewayService provides health and status endpoints
+service GatewayService {
+    // Health check
+    rpc Health(HealthRequest) returns (HealthResponse);
+
+    // Detailed status
+    rpc Status(StatusRequest) returns (StatusResponse);
+
+    // Service discovery
+    rpc ListServices(ListServicesRequest) returns (ListServicesResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+    bool healthy = 1;
+    string version = 2;
+    int64 uptime_seconds = 3;
+}
+
+message StatusRequest {
+    bool include_services = 1;
+}
+
+message StatusResponse {
+    bool healthy = 1;
+    string version = 2;
+    int64 uptime_seconds = 3;
+
+    // Service statuses
+    repeated ServiceStatus services = 4;
+
+    // Metrics summary
+    MetricsSummary metrics = 5;
+}
+
+message ServiceStatus {
+    string name = 1;
+    bool healthy = 2;
+    string address = 3;
+    int64 latency_ms = 4;
+    string error = 5;
+}
+
+message MetricsSummary {
+    int64 total_requests = 1;
+    int64 requests_per_second = 2;
+    double error_rate = 3;
+    double avg_latency_ms = 4;
+    double p99_latency_ms = 5;
+}
+
+message ListServicesRequest {}
+
+message ListServicesResponse {
+    repeated ServiceInfo services = 1;
+}
+
+message ServiceInfo {
+    string name = 1;
+    string address = 2;
+    bool healthy = 3;
+    repeated string endpoints = 4;
+}
