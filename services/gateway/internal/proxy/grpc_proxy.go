@@ -24,7 +24,8 @@ type ServiceConnection struct {
 }
 
 // PoolSize is the number of connections per service
-const PoolSize = 10
+// Increased for high concurrency workloads (500+ concurrent requests)
+const PoolSize = 50
 
 // GRPCProxy manages connections to backend services
 type GRPCProxy struct {

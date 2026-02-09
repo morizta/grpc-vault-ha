@@ -1,0 +1,22 @@
+[Unit]
+Description=Microservice Vault - Lock Service
+After=network.target
+
+[Service]
+Type=simple
+User=vault
+Group=vault
+EnvironmentFile=/etc/microservice-vault/lock.env
+ExecStart=/opt/microservice-vault/bin/lock
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/microservice-vault/data /opt/microservice-vault/logs
+
+[Install]
+WantedBy=multi-user.target

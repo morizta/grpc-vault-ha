@@ -131,10 +131,12 @@ func (r *Router) Handler() http.Handler {
 	return handler
 }
 
-// loggingMiddleware logs all requests
+// loggingMiddleware logs all requests (uses Debug level for high-throughput)
 func (r *Router) loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		r.logger.Info("HTTP request",
+		// Use Debug level to avoid overhead in production
+		// Set log level to "debug" to enable request logging
+		r.logger.Debug("HTTP request",
 			zap.String("method", req.Method),
 			zap.String("path", req.URL.Path),
 			zap.String("remote_addr", req.RemoteAddr),

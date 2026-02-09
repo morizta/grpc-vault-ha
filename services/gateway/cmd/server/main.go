@@ -65,13 +65,14 @@ func main() {
 	// Initialize router
 	httpRouter := router.NewRouter(logger, grpcProxy, cfg, rateLimiter)
 
-	// Create HTTP server
+	// Create HTTP server with optimized settings for high throughput
 	httpServer := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.HTTPPort),
-		Handler:      httpRouter.Handler(),
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:           fmt.Sprintf(":%d", cfg.Server.HTTPPort),
+		Handler:        httpRouter.Handler(),
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		IdleTimeout:    120 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1MB
 	}
 
 	// Create gRPC server

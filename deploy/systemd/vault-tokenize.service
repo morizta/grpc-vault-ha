@@ -1,0 +1,22 @@
+[Unit]
+Description=Microservice Vault - Tokenize Service
+After=network.target vault-lock.service
+Requires=vault-lock.service
+
+[Service]
+Type=simple
+User=vault
+Group=vault
+EnvironmentFile=/etc/microservice-vault/tokenize.env
+ExecStart=/opt/microservice-vault/bin/tokenize
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

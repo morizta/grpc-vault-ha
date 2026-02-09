@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	fastrand "github.com/pocketsizefund/microservice-vault/pkg/crypto/rand"
 )
 
 const (
@@ -62,13 +64,15 @@ func NewCipher(key []byte, version int) (*Cipher, error) {
 // Encrypt encrypts plaintext with optional additional authenticated data (AAD)
 // Returns ciphertext in format: vault:v{version}:{base64(nonce + ciphertext + tag)}
 func (c *Cipher) Encrypt(plaintext, aad []byte) (string, error) {
-	// Generate random nonce
-	nonce := make([]byte, NonceSize)
-	if _, err := rand.Read(nonce); err != nil {
+	// Get nonce from pool and fill with buffered random bytes
+	noncePtr := fastrand.GetNonce()
+	defer fastrand.PutNonce(noncePtr)
+
+	if _, err := fastrand.Read(*noncePtr); err != nil {
 		return "", fmt.Errorf("failed to generate nonce: %w", err)
 	}
 
-	return c.EncryptWithNonce(plaintext, aad, nonce)
+	return c.EncryptWithNonce(plaintext, aad, *noncePtr)
 }
 
 // EncryptWithNonce encrypts using a provided nonce (for convergent encryption)
