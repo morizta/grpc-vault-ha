@@ -10,8 +10,19 @@ type Config struct {
 	Server   ServerConfig
 	JWT      JWTConfig
 	Cache    CacheConfig
+	Storage  StorageConfig
+	Admin    AdminConfig
 	Database DatabaseConfig
 	Redis    RedisConfig
+}
+
+type StorageConfig struct {
+	BoltDBPath string
+}
+
+type AdminConfig struct {
+	Username string
+	Password string
 }
 
 type ServerConfig struct {
@@ -60,6 +71,13 @@ func Load() (*Config, error) {
 		Cache: CacheConfig{
 			L1Size: getEnvInt("AUTH_CACHE_L1_SIZE", 10000),
 			L2TTL:  getEnvDuration("AUTH_CACHE_L2_TTL", 5*time.Minute),
+		},
+		Storage: StorageConfig{
+			BoltDBPath: getEnv("AUTH_STORAGE_PATH", "data/auth.db"),
+		},
+		Admin: AdminConfig{
+			Username: getEnv("AUTH_ADMIN_USERNAME", "admin"),
+			Password: getEnv("AUTH_ADMIN_PASSWORD", "admin"),
 		},
 		Database: DatabaseConfig{
 			Driver:   getEnv("AUTH_DB_DRIVER", "postgres"),

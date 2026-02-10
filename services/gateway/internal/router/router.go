@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	"github.com/pocketsizefund/microservice-vault/services/gateway/internal/auth"
 	"github.com/pocketsizefund/microservice-vault/services/gateway/internal/config"
 	"github.com/pocketsizefund/microservice-vault/services/gateway/internal/handler"
 	"github.com/pocketsizefund/microservice-vault/services/gateway/internal/middleware"
@@ -12,10 +13,12 @@ import (
 
 // Router sets up HTTP routing
 type Router struct {
-	mux           *http.ServeMux
-	logger        *zap.Logger
-	rateLimiter   *middleware.RateLimiter
-	healthHandler *handler.HealthHandler
+	mux            *http.ServeMux
+	logger         *zap.Logger
+	rateLimiter    *middleware.RateLimiter
+	authMiddleware *middleware.AuthMiddleware
+	authorizer     *auth.Authorizer
+	healthHandler  *handler.HealthHandler
 	gatewayHandler *handler.GatewayHandler
 }
 
@@ -25,12 +28,16 @@ func NewRouter(
 	proxy *proxy.GRPCProxy,
 	cfg *config.Config,
 	rateLimiter *middleware.RateLimiter,
+	authMiddleware *middleware.AuthMiddleware,
+	authorizer *auth.Authorizer,
 ) *Router {
 	r := &Router{
-		mux:           http.NewServeMux(),
-		logger:        logger,
-		rateLimiter:   rateLimiter,
-		healthHandler: handler.NewHealthHandler(logger, proxy, &cfg.Services),
+		mux:            http.NewServeMux(),
+		logger:         logger,
+		rateLimiter:    rateLimiter,
+		authMiddleware: authMiddleware,
+		authorizer:     authorizer,
+		healthHandler:  handler.NewHealthHandler(logger, proxy, &cfg.Services),
 		gatewayHandler: handler.NewGatewayHandler(logger, proxy, cfg),
 	}
 
@@ -57,16 +64,17 @@ func (r *Router) setupRoutes() {
 	r.mux.HandleFunc("/v1/tokenize/encode", r.methodHandler("POST", r.gatewayHandler.Tokenize))
 	r.mux.HandleFunc("/v1/tokenize/decode", r.methodHandler("POST", r.gatewayHandler.Detokenize))
 
-	// Secret endpoints
-	r.mux.HandleFunc("/v1/secret/data", r.secretHandler())
+	// Secret endpoints (trailing slash to match sub-paths like /v1/secret/data/myapp/config)
+	r.mux.HandleFunc("/v1/secret/data/", r.secretHandler())
 
-	// Seal/Unseal endpoints
+	// Seal/Unseal endpoints (seal-status, init, unseal skip auth like Vault)
 	r.mux.HandleFunc("/v1/sys/seal-status", r.methodHandler("GET", r.gatewayHandler.GetSealStatus))
 	r.mux.HandleFunc("/v1/sys/init", r.methodHandler("POST", r.gatewayHandler.Initialize))
 	r.mux.HandleFunc("/v1/sys/unseal", r.methodHandler("POST", r.gatewayHandler.Unseal))
 	r.mux.HandleFunc("/v1/sys/seal", r.methodHandler("POST", r.gatewayHandler.Seal))
 
 	// Key management endpoints
+	r.mux.HandleFunc("/v1/transit/keys/", r.keysHandler())
 	r.mux.HandleFunc("/v1/transit/keys", r.keysHandler())
 }
 
@@ -109,26 +117,44 @@ func (r *Router) keysHandler() http.HandlerFunc {
 	}
 }
 
-// Handler returns the HTTP handler with middleware
+// Handler returns the HTTP handler with middleware.
+// Middleware chain (outermost first):
+//  1. CORS
+//  2. Recovery (panic handler)
+//  3. Rate limiting
+//  4. Authentication (token/apikey validation → identity in context)
+//  5. Authorization (policy evaluation → 403 if denied)
+//  6. Logging
+//  7. Route handler
 func (r *Router) Handler() http.Handler {
-	// Apply middleware chain
-	var handler http.Handler = r.mux
+	// Apply middleware chain (innermost to outermost)
+	var h http.Handler = r.mux
 
-	// Logging middleware
-	handler = r.loggingMiddleware(handler)
+	// Logging middleware (innermost - closest to handler)
+	h = r.loggingMiddleware(h)
+
+	// Authorization middleware - checks policies after authentication
+	if r.authorizer != nil {
+		h = r.authorizer.HTTPMiddleware(h)
+	}
+
+	// Authentication middleware - validates token/apikey, sets identity in context
+	if r.authMiddleware != nil {
+		h = r.authMiddleware.HTTPMiddleware(h)
+	}
 
 	// Rate limiting middleware
 	if r.rateLimiter != nil {
-		handler = r.rateLimiter.HTTPMiddleware(handler)
+		h = r.rateLimiter.HTTPMiddleware(h)
 	}
 
 	// Recovery middleware
-	handler = r.recoveryMiddleware(handler)
+	h = r.recoveryMiddleware(h)
 
-	// CORS middleware
-	handler = r.corsMiddleware(handler)
+	// CORS middleware (outermost)
+	h = r.corsMiddleware(h)
 
-	return handler
+	return h
 }
 
 // loggingMiddleware logs all requests (uses Debug level for high-throughput)
@@ -166,7 +192,7 @@ func (r *Router) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key, X-Vault-Token")
 
 		if req.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)

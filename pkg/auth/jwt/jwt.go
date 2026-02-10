@@ -28,6 +28,26 @@ type Claims struct {
 	Metadata   map[string]string `json:"metadata,omitempty"`
 }
 
+// GetIdentity returns the identity claim.
+func (c *Claims) GetIdentity() string { return c.Identity }
+
+// GetTokenID returns the token ID (jti) claim.
+func (c *Claims) GetTokenID() string { return c.TokenID }
+
+// GetPolicies returns the policies claim.
+func (c *Claims) GetPolicies() []string { return c.Policies }
+
+// GetMetadata returns the metadata claim.
+func (c *Claims) GetMetadata() map[string]string { return c.Metadata }
+
+// GetExpiresAt returns the expiration time as unix timestamp.
+func (c *Claims) GetExpiresAt() int64 {
+	if c.RegisteredClaims.ExpiresAt != nil {
+		return c.RegisteredClaims.ExpiresAt.Time.Unix()
+	}
+	return 0
+}
+
 // Manager handles JWT operations
 type Manager struct {
 	privateKey *ecdsa.PrivateKey

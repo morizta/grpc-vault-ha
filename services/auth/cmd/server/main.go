@@ -8,10 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"time"
+
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
 	_ "github.com/pocketsizefund/microservice-vault/pkg/grpcutil/codec" // vtprotobuf codec
@@ -36,19 +40,39 @@ func main() {
 		logger.Fatal("Failed to load configuration", zap.Error(err))
 	}
 
-	// Initialize repositories
-	tokenRepo := repository.NewMemoryTokenRepository()
-	apiKeyRepo := repository.NewMemoryAPIKeyRepository()
-	policyRepo := repository.NewMemoryPolicyRepository()
+	// Initialize BoltDB store
+	store, err := repository.NewBoltStore(cfg.Storage.BoltDBPath)
+	if err != nil {
+		logger.Fatal("Failed to open BoltDB store", zap.Error(err), zap.String("path", cfg.Storage.BoltDBPath))
+	}
+	defer store.Close()
+
+	tokenRepo := &repository.TokenStore{S: store}
+	apiKeyRepo := &repository.APIKeyStore{S: store}
+	policyRepo := &repository.PolicyStore{S: store}
+	credentialRepo := &repository.CredentialStore{S: store}
+
+	// Seed admin user (idempotent)
+	seedAdminUser(credentialRepo, cfg.Admin, logger)
 
 	// Create auth service
-	authService, err := service.NewAuthService(cfg, logger, tokenRepo, apiKeyRepo, policyRepo)
+	authService, err := service.NewAuthService(cfg, logger, tokenRepo, apiKeyRepo, policyRepo, credentialRepo)
 	if err != nil {
 		logger.Fatal("Failed to create auth service", zap.Error(err))
 	}
 
-	// Create gRPC server
-	grpcServer := grpc.NewServer()
+	// Create gRPC server with keepalive enforcement to allow client pings
+	grpcServer := grpc.NewServer(
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             30 * time.Second, // allow pings every 30s
+			PermitWithoutStream: true,
+		}),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionIdle: 5 * time.Minute,
+			Time:              2 * time.Minute,
+			Timeout:           20 * time.Second,
+		}),
+	)
 
 	// Register handler
 	authHandler := handler.NewAuthHandler(authService, logger)
@@ -88,4 +112,28 @@ func main() {
 
 	<-ctx.Done()
 	logger.Info("Auth Service stopped")
+}
+
+func seedAdminUser(credRepo repository.CredentialRepository, adminCfg config.AdminConfig, logger *zap.Logger) {
+	_, err := credRepo.GetByUsername(context.Background(), adminCfg.Username)
+	if err == nil {
+		logger.Debug("Admin user already exists", zap.String("username", adminCfg.Username))
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(adminCfg.Password), bcrypt.DefaultCost)
+	if err != nil {
+		logger.Fatal("Failed to hash admin password", zap.Error(err))
+	}
+
+	err = credRepo.Create(context.Background(), &repository.Credential{
+		Username:     adminCfg.Username,
+		PasswordHash: string(hash),
+		Policies:     []string{"admin", "default"},
+	})
+	if err != nil {
+		logger.Fatal("Failed to seed admin user", zap.Error(err))
+	}
+
+	logger.Info("Admin user seeded", zap.String("username", adminCfg.Username))
 }

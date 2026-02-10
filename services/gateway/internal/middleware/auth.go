@@ -103,11 +103,15 @@ func (m *AuthMiddleware) authenticate(ctx context.Context, r *http.Request) (*Id
 		}, nil
 	}
 
-	// Check for Bearer token
-	authHeader := r.Header.Get("Authorization")
-	if strings.HasPrefix(authHeader, "Bearer ") {
-		token := strings.TrimPrefix(authHeader, "Bearer ")
+	// Check for Bearer token or X-Vault-Token
+	var token string
+	if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
+		token = strings.TrimPrefix(authHeader, "Bearer ")
+	} else if vaultToken := r.Header.Get("X-Vault-Token"); vaultToken != "" {
+		token = vaultToken
+	}
 
+	if token != "" {
 		info, err := m.authClient.ValidateToken(ctx, token)
 		if err != nil {
 			return nil, err

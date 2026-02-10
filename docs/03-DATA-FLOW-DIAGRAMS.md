@@ -46,37 +46,40 @@
     │                │                │                   │              │
 ```
 
-### Token Validation (with caching)
+### Token Validation (with gateway-level LRU caching)
 ```
-┌────────┐      ┌─────────┐      ┌──────────┐      ┌───────┐
-│ Client │      │ Gateway │      │   Auth   │      │ Redis │
-└───┬────┘      └────┬────┘      └────┬─────┘      └───┬───┘
-    │                │                │                │
-    │ 1. Request + Bearer Token       │                │
-    │───────────────►│                │                │
-    │                │                │                │
-    │                │ 2. gRPC ValidateToken           │
-    │                │───────────────►│                │
-    │                │                │                │
-    │                │                │ 3. Check L1 cache (in-memory)
-    │                │                │   MISS         │
-    │                │                │                │
-    │                │                │ 4. Check L2 cache
-    │                │                │───────────────►│
-    │                │                │                │
-    │                │                │ 5. HIT: token data
-    │                │                │◄───────────────│
-    │                │                │                │
-    │                │                │ 6. Verify JWT signature
-    │                │                │   Check expiration
-    │                │                │   Evaluate policies
-    │                │                │                │
-    │                │ 7. {valid, identity, policies}  │
-    │                │◄───────────────│                │
-    │                │                │                │
-    │                │ 8. Forward to target service    │
-    │                │   with identity context         │
-    │                │                │                │
+┌────────┐      ┌──────────────────────────────────┐      ┌──────────┐
+│ Client │      │           Gateway                 │      │   Auth   │
+└───┬────┘      │  ┌──────────┐  ┌──────────────┐  │      └────┬─────┘
+    │           │  │LRU Cache │  │Policy Engine │  │           │
+    │           │  │(10K, 5m) │  │ (local)      │  │           │
+    │           │  └──────────┘  └──────────────┘  │           │
+    │           └────────┬─────────────────────────┘           │
+    │                    │                                     │
+    │ 1. Request + Bearer Token                                │
+    │───────────────────►│                                     │
+    │                    │                                     │
+    │                    │ 2. Check LRU cache                  │
+    │                    │                                     │
+    │                    │   HIT: identity + policies           │
+    │                    │   (skip auth service call)          │
+    │                    │                                     │
+    │                    │   MISS: gRPC ValidateToken          │
+    │                    │────────────────────────────────────►│
+    │                    │                                     │
+    │                    │   3. Validate JWT + return claims   │
+    │                    │◄────────────────────────────────────│
+    │                    │                                     │
+    │                    │ 4. Cache result in LRU              │
+    │                    │                                     │
+    │                    │ 5. Evaluate policy LOCALLY           │
+    │                    │   (policies synced every 30s)       │
+    │                    │                                     │
+    │                    │   DENY → 403 Forbidden              │
+    │                    │   ALLOW → forward to service        │
+    │                    │                                     │
+    │ 6. Response (or 401/403)                                 │
+    │◄───────────────────│                                     │
 ```
 
 ---
@@ -93,10 +96,10 @@
     │   {key_name, plaintext} │           │           │           │
     │────────────►│           │           │           │           │
     │             │           │           │           │           │
-    │             │ 2. Validate token     │           │           │
+    │             │ 2. Validate token (LRU cached at gateway)    │
     │             │──────────►│           │           │           │
     │             │           │           │           │           │
-    │             │ 3. OK + policies      │           │           │
+    │             │ 3. OK + policies (from cache or auth svc)   │
     │             │◄──────────│           │           │           │
     │             │           │           │           │           │
     │             │ 4. gRPC Encrypt       │           │           │

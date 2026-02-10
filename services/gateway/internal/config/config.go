@@ -8,10 +8,20 @@ import (
 
 type Config struct {
 	Server       ServerConfig
+	Auth         AuthConfig
 	RateLimit    RateLimitConfig
 	CircuitBreak CircuitBreakerConfig
 	Services     ServicesConfig
 	Redis        RedisConfig
+}
+
+type AuthConfig struct {
+	Enabled            bool
+	TokenCacheSize     int
+	TokenCacheTTL      time.Duration
+	APIKeyCacheSize    int
+	APIKeyCacheTTL     time.Duration
+	PolicySyncInterval time.Duration
 }
 
 type ServerConfig struct {
@@ -53,10 +63,18 @@ func Load() (*Config, error) {
 			HTTPPort: getEnvInt("GATEWAY_HTTP_PORT", 8080),
 			GRPCPort: getEnvInt("GATEWAY_GRPC_PORT", 9090),
 		},
+		Auth: AuthConfig{
+			Enabled:            getEnvBool("GATEWAY_AUTH_ENABLED", true),
+			TokenCacheSize:     getEnvInt("GATEWAY_AUTH_TOKEN_CACHE_SIZE", 10000),
+			TokenCacheTTL:      getEnvDuration("GATEWAY_AUTH_TOKEN_CACHE_TTL", 5*time.Minute),
+			APIKeyCacheSize:    getEnvInt("GATEWAY_AUTH_APIKEY_CACHE_SIZE", 5000),
+			APIKeyCacheTTL:     getEnvDuration("GATEWAY_AUTH_APIKEY_CACHE_TTL", 5*time.Minute),
+			PolicySyncInterval: getEnvDuration("GATEWAY_AUTH_POLICY_SYNC_INTERVAL", 30*time.Second),
+		},
 		RateLimit: RateLimitConfig{
-			Enabled:         getEnvBool("GATEWAY_RATE_LIMIT_ENABLED", true),
+			Enabled:         getEnvBool("GATEWAY_RATE_LIMIT_ENABLED", false),
 			RequestsPerSec:  getEnvInt("GATEWAY_RATE_LIMIT_RPS", 1000),
-			BurstSize:       getEnvInt("GATEWAY_RATE_LIMIT_BURST", 2000),
+			BurstSize:       getEnvInt("GATEWAY_RATE_LIMIT_BURST", 0), // 0 = same as RPS (Vault-like)
 			CleanupInterval: getEnvDuration("GATEWAY_RATE_LIMIT_CLEANUP", 1*time.Minute),
 		},
 		CircuitBreak: CircuitBreakerConfig{

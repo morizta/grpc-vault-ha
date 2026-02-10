@@ -8,6 +8,9 @@ import "common/v1/common.proto";
 
 // AuthService handles authentication and authorization
 service AuthService {
+    // Authentication
+    rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+
     // Token Operations
     rpc CreateToken(CreateTokenRequest) returns (CreateTokenResponse);
     rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
@@ -28,6 +31,23 @@ service AuthService {
     rpc DeletePolicy(DeletePolicyRequest) returns (DeletePolicyResponse);
     rpc ListPolicies(ListPoliciesRequest) returns (ListPoliciesResponse);
     rpc EvaluatePolicy(EvaluatePolicyRequest) returns (EvaluatePolicyResponse);
+}
+
+// ============= Authentication Messages =============
+
+message AuthenticateRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message AuthenticateResponse {
+    string client_token = 1;
+    string token_id = 2;
+    string accessor = 3;
+    repeated string policies = 4;
+    int64 expires_at = 5;
+    int64 lease_duration = 6;
+    bool renewable = 7;
 }
 
 // ============= Token Messages =============

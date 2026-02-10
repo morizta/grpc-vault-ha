@@ -12,26 +12,18 @@ import (
 
 	"github.com/pocketsizefund/microservice-vault/pkg/crypto/keyring"
 	"github.com/pocketsizefund/microservice-vault/services/lock/internal/config"
+	"github.com/pocketsizefund/microservice-vault/services/lock/internal/repository"
 )
 
 var (
-	ErrSealed       = errors.New("vault is sealed")
-	ErrNotSealed    = errors.New("vault is not sealed")
-	ErrNotInitialized = errors.New("vault is not initialized")
+	ErrSealed             = errors.New("vault is sealed")
+	ErrNotSealed          = errors.New("vault is not sealed")
+	ErrNotInitialized     = errors.New("vault is not initialized")
 	ErrAlreadyInitialized = errors.New("vault is already initialized")
-	ErrInvalidKey   = errors.New("invalid unseal key")
-	ErrSecretNotFound = errors.New("secret not found")
-	ErrKeyNotFound  = errors.New("key not found")
+	ErrInvalidKey         = errors.New("invalid unseal key")
+	ErrSecretNotFound     = errors.New("secret not found")
+	ErrKeyNotFound        = errors.New("key not found")
 )
-
-// Secret represents a stored secret
-type Secret struct {
-	Data           map[string][]byte
-	Version        int
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	CustomMetadata map[string]string
-}
 
 // LockService handles secret storage and key management
 type LockService struct {
@@ -41,18 +33,22 @@ type LockService struct {
 	config *config.Config
 	logger *zap.Logger
 
+	// Repositories
+	secretRepo    repository.SecretRepository
+	sealStateRepo repository.SealStateRepository
+	keyringRepo   repository.KeyringRepository
+
 	// State
 	initialized bool
 	sealed      bool
 
 	// Seal
-	masterKey   []byte
-	shamirKeys  [][]byte
-	threshold   int
-	unsealKeys  [][]byte
+	masterKey  []byte
+	shamirKeys [][]byte
+	threshold  int
+	unsealKeys [][]byte
 
-	// Storage
-	secrets map[string]*Secret
+	// Keyring (in-memory when unsealed)
 	keyring *keyring.Keyring
 
 	// Barrier key (encrypts all data)
@@ -60,17 +56,41 @@ type LockService struct {
 }
 
 // NewLockService creates a new lock service
-func NewLockService(cfg *config.Config, logger *zap.Logger) *LockService {
-	return &LockService{
-		config:      cfg,
-		logger:      logger,
-		initialized: false,
-		sealed:      true,
-		secrets:     make(map[string]*Secret),
-		keyring:     keyring.NewKeyring(),
-		threshold:   cfg.Seal.Threshold,
-		unsealKeys:  make([][]byte, 0),
+func NewLockService(
+	cfg *config.Config,
+	logger *zap.Logger,
+	secretRepo repository.SecretRepository,
+	sealStateRepo repository.SealStateRepository,
+	keyringRepo repository.KeyringRepository,
+) *LockService {
+	svc := &LockService{
+		config:        cfg,
+		logger:        logger,
+		secretRepo:    secretRepo,
+		sealStateRepo: sealStateRepo,
+		keyringRepo:   keyringRepo,
+		initialized:   false,
+		sealed:        true,
+		keyring:       keyring.NewKeyring(),
+		threshold:     cfg.Seal.Threshold,
+		unsealKeys:    make([][]byte, 0),
 	}
+
+	// Load persisted seal state
+	state, err := sealStateRepo.Load(context.Background())
+	if err == nil && state.Initialized {
+		svc.initialized = true
+		svc.masterKey = state.MasterKey
+		svc.barrierKey = state.BarrierKey
+		svc.shamirKeys = state.ShamirKeys
+		svc.threshold = state.Threshold
+		// Vault starts sealed — must unseal to access data
+		svc.sealed = true
+		logger.Info("Seal state loaded from storage (vault starts sealed)",
+			zap.Int("threshold", state.Threshold))
+	}
+
+	return svc
 }
 
 // Initialize initializes the vault with Shamir secret sharing
@@ -107,13 +127,31 @@ func (s *LockService) Initialize(ctx context.Context, shares, threshold int) ([]
 	}
 	rootToken := base64.StdEncoding.EncodeToString(rootTokenBytes)
 
-	// Store state
+	// Store state in memory
 	s.masterKey = masterKey
 	s.shamirKeys = shamirKeys
 	s.barrierKey = barrierKey
 	s.threshold = threshold
 	s.initialized = true
 	s.sealed = false // Auto-unseal after init
+
+	// Persist seal state to BoltDB
+	if err := s.sealStateRepo.Save(ctx, &repository.SealState{
+		MasterKey:   masterKey,
+		BarrierKey:  barrierKey,
+		ShamirKeys:  shamirKeys,
+		Threshold:   threshold,
+		Initialized: true,
+	}); err != nil {
+		s.logger.Error("Failed to persist seal state", zap.Error(err))
+	}
+
+	// Persist empty keyring
+	if data, err := s.keyring.Marshal(); err == nil {
+		if err := s.keyringRepo.Save(ctx, data); err != nil {
+			s.logger.Error("Failed to persist keyring", zap.Error(err))
+		}
+	}
 
 	// Encode keys for return
 	keyStrings := make([]string, len(shamirKeys))
@@ -166,6 +204,18 @@ func (s *LockService) Unseal(ctx context.Context, keyShare string) (bool, int, e
 			return false, 0, ErrInvalidKey
 		}
 
+		// Load keyring from storage
+		if data, err := s.keyringRepo.Load(ctx); err == nil {
+			s.keyring = keyring.NewKeyring()
+			if err := s.keyring.Unmarshal(data); err != nil {
+				s.logger.Warn("Failed to load keyring from storage, starting fresh", zap.Error(err))
+				s.keyring = keyring.NewKeyring()
+			}
+		} else {
+			s.logger.Debug("No persisted keyring found, starting fresh")
+			s.keyring = keyring.NewKeyring()
+		}
+
 		// Unseal successful
 		s.sealed = false
 		s.unsealKeys = make([][]byte, 0)
@@ -188,6 +238,13 @@ func (s *LockService) Seal(ctx context.Context) error {
 
 	if s.sealed {
 		return ErrNotSealed
+	}
+
+	// Persist keyring before sealing
+	if data, err := s.keyring.Marshal(); err == nil {
+		if err := s.keyringRepo.Save(ctx, data); err != nil {
+			s.logger.Error("Failed to persist keyring before seal", zap.Error(err))
+		}
 	}
 
 	// Clear sensitive data from memory
@@ -232,22 +289,26 @@ func (s *LockService) PutSecret(ctx context.Context, path string, data map[strin
 	now := time.Now()
 	version := 1
 
-	if existing, exists := s.secrets[path]; exists {
+	if existing, err := s.secretRepo.Get(ctx, path); err == nil {
 		version = existing.Version + 1
 	}
 
-	s.secrets[path] = &Secret{
+	secret := &repository.Secret{
 		Data:      data,
 		Version:   version,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
 
+	if err := s.secretRepo.Put(ctx, path, secret); err != nil {
+		return 0, err
+	}
+
 	return version, nil
 }
 
 // GetSecret retrieves a secret
-func (s *LockService) GetSecret(ctx context.Context, path string) (*Secret, error) {
+func (s *LockService) GetSecret(ctx context.Context, path string) (*repository.Secret, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -255,9 +316,12 @@ func (s *LockService) GetSecret(ctx context.Context, path string) (*Secret, erro
 		return nil, ErrSealed
 	}
 
-	secret, exists := s.secrets[path]
-	if !exists {
-		return nil, ErrSecretNotFound
+	secret, err := s.secretRepo.Get(ctx, path)
+	if err != nil {
+		if errors.Is(err, repository.ErrSecretNotFound) {
+			return nil, ErrSecretNotFound
+		}
+		return nil, err
 	}
 
 	return secret, nil
@@ -272,11 +336,13 @@ func (s *LockService) DeleteSecret(ctx context.Context, path string) error {
 		return ErrSealed
 	}
 
-	if _, exists := s.secrets[path]; !exists {
-		return ErrSecretNotFound
+	if err := s.secretRepo.Delete(ctx, path); err != nil {
+		if errors.Is(err, repository.ErrSecretNotFound) {
+			return ErrSecretNotFound
+		}
+		return err
 	}
 
-	delete(s.secrets, path)
 	return nil
 }
 
@@ -289,14 +355,7 @@ func (s *LockService) ListSecrets(ctx context.Context, prefix string) ([]string,
 		return nil, ErrSealed
 	}
 
-	var keys []string
-	for path := range s.secrets {
-		if len(prefix) == 0 || len(path) >= len(prefix) && path[:len(prefix)] == prefix {
-			keys = append(keys, path)
-		}
-	}
-
-	return keys, nil
+	return s.secretRepo.List(ctx, prefix)
 }
 
 // CreateKey creates a new encryption key
@@ -309,7 +368,14 @@ func (s *LockService) CreateKey(ctx context.Context, name string, keyType keyrin
 	}
 
 	_, err := s.keyring.CreateKey(name, keyType)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Persist keyring
+	s.persistKeyring(ctx)
+
+	return nil
 }
 
 // GetKey returns key information
@@ -345,7 +411,15 @@ func (s *LockService) RotateKey(ctx context.Context, name string) (int, error) {
 		return 0, ErrSealed
 	}
 
-	return s.keyring.RotateKey(name)
+	version, err := s.keyring.RotateKey(name)
+	if err != nil {
+		return 0, err
+	}
+
+	// Persist keyring
+	s.persistKeyring(ctx)
+
+	return version, nil
 }
 
 // ListKeys returns all key names
@@ -358,6 +432,18 @@ func (s *LockService) ListKeys(ctx context.Context) ([]string, error) {
 	}
 
 	return s.keyring.ListKeys(), nil
+}
+
+// persistKeyring saves the keyring to storage (caller must hold lock)
+func (s *LockService) persistKeyring(ctx context.Context) {
+	data, err := s.keyring.Marshal()
+	if err != nil {
+		s.logger.Error("Failed to marshal keyring", zap.Error(err))
+		return
+	}
+	if err := s.keyringRepo.Save(ctx, data); err != nil {
+		s.logger.Error("Failed to persist keyring", zap.Error(err))
+	}
 }
 
 // Placeholder Shamir functions (use proper implementation in production)

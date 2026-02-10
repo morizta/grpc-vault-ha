@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -8,7 +10,9 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// RateLimiter implements per-client rate limiting
+// RateLimiter implements per-client-IP rate limiting (Vault-like).
+// Each client IP gets its own token bucket. If BurstSize <= 0, burst
+// defaults to RequestsPerSec (strict token bucket, no extra burst).
 type RateLimiter struct {
 	clients sync.Map
 	r       rate.Limit
@@ -21,30 +25,34 @@ type client struct {
 	lastSeen time.Time
 }
 
-// NewRateLimiter creates a new rate limiter
+// NewRateLimiter creates a new per-IP rate limiter.
+// If burstSize <= 0, it defaults to requestsPerSecond (Vault-like strict token bucket).
 func NewRateLimiter(requestsPerSecond int, burstSize int, cleanupInterval time.Duration) *RateLimiter {
+	if burstSize <= 0 {
+		burstSize = requestsPerSecond
+	}
+
 	rl := &RateLimiter{
 		r:       rate.Limit(requestsPerSecond),
 		b:       burstSize,
 		cleanup: cleanupInterval,
 	}
 
-	// Start cleanup goroutine
 	go rl.cleanupLoop()
 
 	return rl
 }
 
-// getLimiter returns the rate limiter for a client
-func (rl *RateLimiter) getLimiter(clientID string) *rate.Limiter {
-	if c, ok := rl.clients.Load(clientID); ok {
+// getLimiter returns the rate limiter for a client IP.
+func (rl *RateLimiter) getLimiter(clientIP string) *rate.Limiter {
+	if c, ok := rl.clients.Load(clientIP); ok {
 		cl := c.(*client)
 		cl.lastSeen = time.Now()
 		return cl.limiter
 	}
 
 	limiter := rate.NewLimiter(rl.r, rl.b)
-	rl.clients.Store(clientID, &client{
+	rl.clients.Store(clientIP, &client{
 		limiter:  limiter,
 		lastSeen: time.Now(),
 	})
@@ -52,12 +60,12 @@ func (rl *RateLimiter) getLimiter(clientID string) *rate.Limiter {
 	return limiter
 }
 
-// Allow checks if a request from clientID is allowed
-func (rl *RateLimiter) Allow(clientID string) bool {
-	return rl.getLimiter(clientID).Allow()
+// Allow checks if a request from the given client IP is allowed.
+func (rl *RateLimiter) Allow(clientIP string) bool {
+	return rl.getLimiter(clientIP).Allow()
 }
 
-// cleanupLoop removes old clients
+// cleanupLoop removes stale client entries.
 func (rl *RateLimiter) cleanupLoop() {
 	ticker := time.NewTicker(rl.cleanup)
 	defer ticker.Stop()
@@ -73,13 +81,16 @@ func (rl *RateLimiter) cleanupLoop() {
 	}
 }
 
-// HTTPMiddleware returns an HTTP middleware for rate limiting
+// HTTPMiddleware returns an HTTP middleware for rate limiting.
+// Like Vault, it scopes rate limits per client IP and returns
+// X-RateLimit-Limit and Retry-After headers on 429.
 func (rl *RateLimiter) HTTPMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get client identifier (IP or token)
 		clientID := getClientID(r)
 
 		if !rl.Allow(clientID) {
+			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", int(rl.r)))
+			w.Header().Set("Retry-After", "1")
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
 			return
 		}
@@ -88,25 +99,26 @@ func (rl *RateLimiter) HTTPMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// getClientID extracts client identifier from request
+// getClientID extracts client identifier from request.
+// Priority: API key > Token > IP (fairer for multi-tenant behind reverse proxy).
 func getClientID(r *http.Request) string {
-	// Check for API key first
 	if apiKey := r.Header.Get("X-API-Key"); apiKey != "" {
 		return "apikey:" + apiKey
 	}
 
-	// Check for token
-	if token := r.Header.Get("Authorization"); token != "" {
-		return "token:" + token[:min(len(token), 32)]
+	if auth := r.Header.Get("Authorization"); len(auth) > 10 {
+		// Use first 32 chars of token as key (enough to distinguish users)
+		end := len(auth)
+		if end > 42 {
+			end = 42
+		}
+		return "token:" + auth[7:end] // skip "Bearer "
 	}
 
-	// Fall back to IP
-	return "ip:" + r.RemoteAddr
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
+	// Fallback to IP
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return "ip:" + r.RemoteAddr
 	}
-	return b
+	return "ip:" + host
 }

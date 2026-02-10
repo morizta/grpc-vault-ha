@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/pocketsizefund/microservice-vault/pkg/auth/jwt"
 	"github.com/pocketsizefund/microservice-vault/pkg/auth/policy"
@@ -22,6 +23,7 @@ var (
 	ErrInvalidAPIKey      = errors.New("invalid API key")
 	ErrPolicyNotFound     = errors.New("policy not found")
 	ErrPermissionDenied   = errors.New("permission denied")
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 // AuthService handles authentication and authorization
@@ -31,9 +33,10 @@ type AuthService struct {
 	jwtManager *jwt.Manager
 
 	// Repositories
-	tokenRepo  repository.TokenRepository
-	apiKeyRepo repository.APIKeyRepository
-	policyRepo repository.PolicyRepository
+	tokenRepo      repository.TokenRepository
+	apiKeyRepo     repository.APIKeyRepository
+	policyRepo     repository.PolicyRepository
+	credentialRepo repository.CredentialRepository
 
 	// Caches
 	tokenCache  *cache.LRUCache[string, *jwt.Claims]
@@ -50,6 +53,7 @@ func NewAuthService(
 	tokenRepo repository.TokenRepository,
 	apiKeyRepo repository.APIKeyRepository,
 	policyRepo repository.PolicyRepository,
+	credentialRepo repository.CredentialRepository,
 ) (*AuthService, error) {
 	// Create JWT manager
 	jwtManager, err := jwt.NewManager(jwt.Config{
@@ -76,7 +80,20 @@ func NewAuthService(
 	// Create policy evaluator
 	policyEvaluator := policy.NewEvaluator()
 
-	// Load policies into evaluator
+	// Register built-in policies (replicating Vault's default policy set)
+	builtinPolicies := getBuiltinPolicies()
+	for _, bp := range builtinPolicies {
+		policyEvaluator.AddPolicy(bp)
+		// Persist built-in policies to repository (idempotent)
+		policyRepo.Create(context.Background(), &repository.StoredPolicy{
+			Name:        bp.Name,
+			Description: bp.Description,
+			Rules:       bp.Rules,
+		})
+	}
+	logger.Info("Built-in policies registered", zap.Int("count", len(builtinPolicies)))
+
+	// Load user-defined policies into evaluator
 	policies, _, _ := policyRepo.List(context.Background(), 1000, 0)
 	for _, p := range policies {
 		policyEvaluator.AddPolicy(&policy.Policy{
@@ -92,6 +109,7 @@ func NewAuthService(
 		tokenRepo:       tokenRepo,
 		apiKeyRepo:      apiKeyRepo,
 		policyRepo:      policyRepo,
+		credentialRepo:  credentialRepo,
 		tokenCache:      tokenCache,
 		policyCache:     policyCache,
 		policyEvaluator: policyEvaluator,
@@ -139,6 +157,26 @@ func (s *AuthService) CreateToken(ctx context.Context, identity string, policies
 	)
 
 	return token, tokenID, expiresAt, nil
+}
+
+// Authenticate validates credentials and returns a token
+func (s *AuthService) Authenticate(ctx context.Context, username, password string) (token string, tokenID string, expiresAt time.Time, policies []string, err error) {
+	cred, err := s.credentialRepo.GetByUsername(ctx, username)
+	if err != nil {
+		return "", "", time.Time{}, nil, ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(cred.PasswordHash), []byte(password)); err != nil {
+		return "", "", time.Time{}, nil, ErrInvalidCredentials
+	}
+
+	t, tid, exp, err := s.CreateToken(ctx, username, cred.Policies, s.config.JWT.DefaultTTL, nil)
+	if err != nil {
+		return "", "", time.Time{}, nil, err
+	}
+
+	s.logger.Info("User authenticated", zap.String("username", username))
+	return t, tid, exp, cred.Policies, nil
 }
 
 // ValidateToken validates a JWT token
@@ -364,4 +402,70 @@ func (s *AuthService) ListTokens(ctx context.Context, identity string, limit, of
 // ListAPIKeys lists API keys for an identity
 func (s *AuthService) ListAPIKeys(ctx context.Context, identity string, limit, offset int) ([]*repository.APIKey, int, error) {
 	return s.apiKeyRepo.ListByIdentity(ctx, identity, limit, offset)
+}
+
+// getBuiltinPolicies returns the default built-in policies that replicate
+// Vault's policy model. These are registered automatically at startup.
+func getBuiltinPolicies() []*policy.Policy {
+	return []*policy.Policy{
+		// admin - full access to everything (like Vault root token)
+		{
+			Name:        "admin",
+			Description: "Full administrative access to all resources",
+			Rules: []*policy.Rule{
+				{Path: "**", Capabilities: []policy.Capability{policy.CapabilitySudo}},
+			},
+		},
+		// crypto-user - encrypt and decrypt operations
+		{
+			Name:        "crypto-user",
+			Description: "Allow encrypt and decrypt operations",
+			Rules: []*policy.Rule{
+				{Path: "crypto/encrypt", Capabilities: []policy.Capability{policy.CapabilityCreate}},
+				{Path: "crypto/decrypt", Capabilities: []policy.Capability{policy.CapabilityCreate}},
+			},
+		},
+		// crypto-admin - full crypto + key management
+		{
+			Name:        "crypto-admin",
+			Description: "Full access to crypto operations and key management",
+			Rules: []*policy.Rule{
+				{Path: "crypto/**", Capabilities: []policy.Capability{policy.CapabilityCreate, policy.CapabilityRead}},
+				{Path: "transit/keys", Capabilities: []policy.Capability{policy.CapabilityCreate, policy.CapabilityRead, policy.CapabilityUpdate, policy.CapabilityDelete, policy.CapabilityList}},
+			},
+		},
+		// tokenize-user - tokenize and detokenize operations
+		{
+			Name:        "tokenize-user",
+			Description: "Allow tokenize and detokenize operations",
+			Rules: []*policy.Rule{
+				{Path: "tokenize/encode", Capabilities: []policy.Capability{policy.CapabilityCreate}},
+				{Path: "tokenize/decode", Capabilities: []policy.Capability{policy.CapabilityCreate}},
+			},
+		},
+		// secret-reader - read-only access to secrets
+		{
+			Name:        "secret-reader",
+			Description: "Read-only access to secrets",
+			Rules: []*policy.Rule{
+				{Path: "secret/**", Capabilities: []policy.Capability{policy.CapabilityRead, policy.CapabilityList}},
+			},
+		},
+		// secret-writer - full CRUD on secrets
+		{
+			Name:        "secret-writer",
+			Description: "Full access to secrets",
+			Rules: []*policy.Rule{
+				{Path: "secret/**", Capabilities: []policy.Capability{policy.CapabilityCreate, policy.CapabilityRead, policy.CapabilityUpdate, policy.CapabilityDelete, policy.CapabilityList}},
+			},
+		},
+		// sys-admin - seal/unseal and system operations
+		{
+			Name:        "sys-admin",
+			Description: "System administration (seal, unseal, init)",
+			Rules: []*policy.Rule{
+				{Path: "sys/**", Capabilities: []policy.Capability{policy.CapabilitySudo}},
+			},
+		},
+	}
 }

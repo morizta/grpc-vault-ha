@@ -117,15 +117,20 @@ func (h *LockHandler) GetSecret(ctx context.Context, req *lockv1.GetSecretReques
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	metadata := &lockv1.SecretMetadata{
+		Path:           req.Path,
+		Version:        int32(secret.Version),
+		CurrentVersion: int32(secret.Version),
+		CreatedAt:      secret.CreatedAt.Unix(),
+		UpdatedAt:      secret.UpdatedAt.Unix(),
+	}
+	if secret.CustomMetadata != nil {
+		metadata.CustomMetadata = secret.CustomMetadata
+	}
+
 	return &lockv1.GetSecretResponse{
-		Data: secret.Data,
-		Metadata: &lockv1.SecretMetadata{
-			Path:           req.Path,
-			Version:        int32(secret.Version),
-			CurrentVersion: int32(secret.Version),
-			CreatedAt:      secret.CreatedAt.Unix(),
-			UpdatedAt:      secret.UpdatedAt.Unix(),
-		},
+		Data:     secret.Data,
+		Metadata: metadata,
 	}, nil
 }
 

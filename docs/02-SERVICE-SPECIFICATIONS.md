@@ -16,65 +16,74 @@
 Entry point untuk semua request ke platform. Bertanggung jawab untuk routing, rate limiting, dan load balancing.
 
 ### Responsibilities
-- TLS termination
+- Authentication (JWT token & API key validation with LRU caching)
+- Authorization (policy-based, synced from Auth Service every 30s)
 - Request routing ke internal services
-- Rate limiting (per client, per endpoint)
-- Request batching & aggregation
+- Rate limiting (per-client, strict token bucket, default OFF)
 - Circuit breaker pattern
+- Connection pooling (50 gRPC connections per service, round-robin)
 - Health checking
-- Metrics collection
+- VTProtobuf optimized serialization
 
 ### Architecture
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        GATEWAY SERVICE                           │
 │                                                                  │
-│  ┌────────────────┐    ┌────────────────┐    ┌────────────────┐ │
-│  │   TLS Handler  │───►│  Rate Limiter  │───►│    Router      │ │
-│  └────────────────┘    └────────────────┘    └────────────────┘ │
-│                                                      │          │
-│                              ┌───────────────────────┼──────┐   │
-│                              ▼                       ▼      ▼   │
-│                        ┌──────────┐           ┌──────────┐      │
-│                        │  Auth    │           │  Crypto  │ ...  │
-│                        │  Client  │           │  Client  │      │
-│                        └──────────┘           └──────────┘      │
+│  Middleware Chain (outermost → innermost):                        │
+│  ┌────────┐ ┌──────────┐ ┌────────────┐ ┌──────────┐ ┌───────┐ │
+│  │  CORS  │►│Rate Limit│►│    Auth    │►│ Authz    │►│ Log   │ │
+│  └────────┘ └──────────┘ └────────────┘ └──────────┘ └───────┘ │
+│                                │                                 │
+│                   ┌────────────┼────────────┐                   │
+│                   ▼            ▼            ▼                   │
+│             ┌──────────┐ ┌──────────┐ ┌──────────┐             │
+│             │  Auth    │ │  Crypto  │ │ Tokenize │  ...        │
+│             │  Client  │ │  Client  │ │  Client  │             │
+│             │(50 conns)│ │(50 conns)│ │(50 conns)│             │
+│             └──────────┘ └──────────┘ └──────────┘             │
 │                                                                  │
-│  ┌────────────────┐    ┌────────────────┐    ┌────────────────┐ │
-│  │Circuit Breaker │    │ Batch Handler  │    │ Health Check   │ │
-│  └────────────────┘    └────────────────┘    └────────────────┘ │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
+│  │Circuit Breaker│ │ LRU Cache   │ │ Policy Sync  │            │
+│  │  (per svc)   │ │(10K, 5m TTL)│ │ (every 30s)  │            │
+│  └──────────────┘ └──────────────┘ └──────────────┘            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ### API Endpoints
 
-#### REST API
+#### REST API (actual implementation)
 ```
-POST   /v1/auth/token              → Auth Service
-POST   /v1/auth/validate           → Auth Service
-DELETE /v1/auth/token/{id}         → Auth Service
+# Health (no auth required)
+GET    /health/live                  → Health Check
+GET    /health/ready                 → Health Check
+GET    /status                       → Service Status
 
-POST   /v1/crypto/encrypt          → Crypto Service
-POST   /v1/crypto/decrypt          → Crypto Service
-POST   /v1/crypto/sign             → Crypto Service
-POST   /v1/crypto/verify           → Crypto Service
-POST   /v1/crypto/hmac             → Crypto Service
+# Auth (login skips auth, lookup requires auth)
+POST   /v1/auth/login               → Auth Service (skip auth)
+GET    /v1/auth/token/lookup-self    → Auth Service
 
-POST   /v1/tokenize/encode         → Tokenize Service
-POST   /v1/tokenize/decode         → Tokenize Service
-POST   /v1/tokenize/fpe/encrypt    → Tokenize Service
-POST   /v1/tokenize/fpe/decrypt    → Tokenize Service
+# Crypto (requires auth + policy)
+POST   /v1/crypto/encrypt           → Crypto Service
+POST   /v1/crypto/decrypt           → Crypto Service
 
-GET    /v1/secrets/{path}          → Lock Service
-POST   /v1/secrets/{path}          → Lock Service
-DELETE /v1/secrets/{path}          → Lock Service
+# Tokenize (requires auth + policy)
+POST   /v1/tokenize/encode          → Tokenize Service
+POST   /v1/tokenize/decode          → Tokenize Service
 
-GET    /v1/keys/{name}             → Lock Service
-POST   /v1/keys/{name}             → Lock Service
-POST   /v1/keys/{name}/rotate      → Lock Service
+# Secrets (requires auth + policy)
+GET    /v1/secret/data              → Lock Service
+POST   /v1/secret/data              → Lock Service
 
-GET    /health                     → Health Check
-GET    /metrics                    → Prometheus Metrics
+# Key Management (requires auth + policy)
+GET    /v1/transit/keys             → Lock Service
+POST   /v1/transit/keys             → Lock Service
+
+# Seal/Unseal (skip auth - uses Shamir shares)
+GET    /v1/sys/seal-status          → Lock Service
+POST   /v1/sys/init                 → Lock Service
+POST   /v1/sys/unseal               → Lock Service
+POST   /v1/sys/seal                 → Lock Service
 ```
 
 #### gRPC Services
@@ -86,48 +95,46 @@ service GatewayService {
 }
 ```
 
-### Configuration
-```yaml
-gateway:
-  server:
-    http_port: 8080
-    grpc_port: 9090
-    tls:
-      enabled: true
-      cert_file: /certs/server.crt
-      key_file: /certs/server.key
+### Configuration (Environment Variables)
+```
+# Server
+GATEWAY_HTTP_PORT=8080
+GATEWAY_GRPC_PORT=9090
 
-  rate_limit:
-    enabled: true
-    requests_per_second: 10000
-    burst: 1000
-    backend: redis
+# Authentication (gateway-level, like Vault's core.checkToken)
+GATEWAY_AUTH_ENABLED=true                      # Enable auth middleware
+GATEWAY_AUTH_TOKEN_CACHE_SIZE=10000             # LRU cache entries
+GATEWAY_AUTH_TOKEN_CACHE_TTL=5m                # Cache TTL
+GATEWAY_AUTH_APIKEY_CACHE_SIZE=5000             # API key cache entries
+GATEWAY_AUTH_POLICY_SYNC_INTERVAL=30s           # Policy sync from auth service
 
-  circuit_breaker:
-    enabled: true
-    threshold: 5
-    timeout: 30s
+# Rate Limiting (Vault-like, default OFF)
+GATEWAY_RATE_LIMIT_ENABLED=false               # Default OFF (admin enables manually)
+GATEWAY_RATE_LIMIT_RPS=1000                    # Requests per second per client
+GATEWAY_RATE_LIMIT_BURST=0                     # 0 = same as RPS (strict token bucket)
+GATEWAY_RATE_LIMIT_CLEANUP=1m                  # Stale client cleanup interval
 
-  services:
-    auth:
-      address: auth-service:9090
-      timeout: 5s
-    crypto:
-      address: crypto-service:9090
-      timeout: 10s
-    tokenize:
-      address: tokenize-service:9090
-      timeout: 10s
-    lock:
-      address: lock-service:9090
-      timeout: 15s
+# Circuit Breaker
+GATEWAY_CB_MAX_REQUESTS=5
+GATEWAY_CB_INTERVAL=10s
+GATEWAY_CB_TIMEOUT=60s
+GATEWAY_CB_FAILURE_RATIO=0.5
+
+# Backend Services
+AUTH_SERVICE_ADDRESS=localhost:9091
+CRYPTO_SERVICE_ADDRESS=localhost:9092
+TOKENIZE_SERVICE_ADDRESS=localhost:9093
+LOCK_SERVICE_ADDRESS=localhost:9094
+AUDIT_SERVICE_ADDRESS=localhost:9095
 ```
 
 ### High Throughput Features
-- **Connection Pooling**: Reuse gRPC connections ke downstream services
-- **Request Batching**: Aggregate multiple requests ke satu batch call
-- **Async Processing**: Non-blocking I/O dengan goroutines
-- **Circuit Breaker**: Prevent cascade failures
+- **Connection Pooling**: 50 gRPC connections per service (round-robin)
+- **LRU Token Cache**: 10K entries, 5min TTL — auth adds ~0% overhead
+- **Background Policy Sync**: Policies synced every 30s, evaluated locally
+- **VTProtobuf**: Optimized protobuf serialization
+- **Circuit Breaker**: Prevent cascade failures per backend service
+- **Rate Limiting**: Vault-like strict token bucket, per-client (apikey > token > IP)
 
 ---
 

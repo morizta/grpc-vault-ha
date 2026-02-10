@@ -32,6 +32,34 @@ func (h *AuthHandler) Register(server *grpc.Server) {
 	authv1.RegisterAuthServiceServer(server, h)
 }
 
+// Authenticate validates credentials and returns a token
+func (h *AuthHandler) Authenticate(ctx context.Context, req *authv1.AuthenticateRequest) (*authv1.AuthenticateResponse, error) {
+	if req.Username == "" || req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "username and password are required")
+	}
+
+	token, tokenID, expiresAt, policies, err := h.service.Authenticate(ctx, req.Username, req.Password)
+	if err != nil {
+		if err == service.ErrInvalidCredentials {
+			return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+		}
+		h.logger.Error("Authentication failed", zap.Error(err))
+		return nil, status.Error(codes.Internal, "authentication failed")
+	}
+
+	leaseDuration := int64(expiresAt.Sub(time.Now()).Seconds())
+
+	return &authv1.AuthenticateResponse{
+		ClientToken:   token,
+		TokenId:       tokenID,
+		Accessor:      tokenID[:8],
+		Policies:      policies,
+		ExpiresAt:     expiresAt.Unix(),
+		LeaseDuration: leaseDuration,
+		Renewable:     true,
+	}, nil
+}
+
 // CreateToken creates a new JWT token
 func (h *AuthHandler) CreateToken(ctx context.Context, req *authv1.CreateTokenRequest) (*authv1.CreateTokenResponse, error) {
 	if req.Identity == "" {

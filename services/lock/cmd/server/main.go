@@ -20,6 +20,7 @@ import (
 	"github.com/pocketsizefund/microservice-vault/pkg/telemetry/logging"
 	"github.com/pocketsizefund/microservice-vault/services/lock/internal/config"
 	"github.com/pocketsizefund/microservice-vault/services/lock/internal/handler"
+	"github.com/pocketsizefund/microservice-vault/services/lock/internal/repository"
 	"github.com/pocketsizefund/microservice-vault/services/lock/internal/service"
 )
 
@@ -39,8 +40,19 @@ func main() {
 		logger.Fatal("Failed to load configuration", zap.Error(err))
 	}
 
+	// Initialize BoltDB store
+	store, err := repository.NewBoltStore(cfg.Storage.BoltDBPath)
+	if err != nil {
+		logger.Fatal("Failed to open BoltDB store", zap.Error(err), zap.String("path", cfg.Storage.BoltDBPath))
+	}
+	defer store.Close()
+
+	secretRepo := &repository.SecretStore{S: store}
+	sealRepo := &repository.SealStore{S: store}
+	keyRepo := &repository.KeyStore{S: store}
+
 	// Create services
-	lockService := service.NewLockService(cfg, logger)
+	lockService := service.NewLockService(cfg, logger, secretRepo, sealRepo, keyRepo)
 
 	// Create gRPC server with optimized settings for high throughput
 	grpcServer := grpc.NewServer(

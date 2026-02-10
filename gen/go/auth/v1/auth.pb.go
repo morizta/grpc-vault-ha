@@ -22,6 +22,150 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type AuthenticateRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateRequest) Reset() {
+	*x = AuthenticateRequest{}
+	mi := &file_auth_v1_auth_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateRequest) ProtoMessage() {}
+
+func (x *AuthenticateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *AuthenticateRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *AuthenticateRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+type AuthenticateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ClientToken   string                 `protobuf:"bytes,1,opt,name=client_token,json=clientToken,proto3" json:"client_token,omitempty"`
+	TokenId       string                 `protobuf:"bytes,2,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
+	Accessor      string                 `protobuf:"bytes,3,opt,name=accessor,proto3" json:"accessor,omitempty"`
+	Policies      []string               `protobuf:"bytes,4,rep,name=policies,proto3" json:"policies,omitempty"`
+	ExpiresAt     int64                  `protobuf:"varint,5,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	LeaseDuration int64                  `protobuf:"varint,6,opt,name=lease_duration,json=leaseDuration,proto3" json:"lease_duration,omitempty"`
+	Renewable     bool                   `protobuf:"varint,7,opt,name=renewable,proto3" json:"renewable,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateResponse) Reset() {
+	*x = AuthenticateResponse{}
+	mi := &file_auth_v1_auth_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateResponse) ProtoMessage() {}
+
+func (x *AuthenticateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateResponse.ProtoReflect.Descriptor instead.
+func (*AuthenticateResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AuthenticateResponse) GetClientToken() string {
+	if x != nil {
+		return x.ClientToken
+	}
+	return ""
+}
+
+func (x *AuthenticateResponse) GetTokenId() string {
+	if x != nil {
+		return x.TokenId
+	}
+	return ""
+}
+
+func (x *AuthenticateResponse) GetAccessor() string {
+	if x != nil {
+		return x.Accessor
+	}
+	return ""
+}
+
+func (x *AuthenticateResponse) GetPolicies() []string {
+	if x != nil {
+		return x.Policies
+	}
+	return nil
+}
+
+func (x *AuthenticateResponse) GetExpiresAt() int64 {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return 0
+}
+
+func (x *AuthenticateResponse) GetLeaseDuration() int64 {
+	if x != nil {
+		return x.LeaseDuration
+	}
+	return 0
+}
+
+func (x *AuthenticateResponse) GetRenewable() bool {
+	if x != nil {
+		return x.Renewable
+	}
+	return false
+}
+
 type CreateTokenRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Identity      string                 `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
@@ -34,7 +178,7 @@ type CreateTokenRequest struct {
 
 func (x *CreateTokenRequest) Reset() {
 	*x = CreateTokenRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[0]
+	mi := &file_auth_v1_auth_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -46,7 +190,7 @@ func (x *CreateTokenRequest) String() string {
 func (*CreateTokenRequest) ProtoMessage() {}
 
 func (x *CreateTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[0]
+	mi := &file_auth_v1_auth_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +203,7 @@ func (x *CreateTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTokenRequest.ProtoReflect.Descriptor instead.
 func (*CreateTokenRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{0}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CreateTokenRequest) GetIdentity() string {
@@ -102,7 +246,7 @@ type CreateTokenResponse struct {
 
 func (x *CreateTokenResponse) Reset() {
 	*x = CreateTokenResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[1]
+	mi := &file_auth_v1_auth_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -114,7 +258,7 @@ func (x *CreateTokenResponse) String() string {
 func (*CreateTokenResponse) ProtoMessage() {}
 
 func (x *CreateTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[1]
+	mi := &file_auth_v1_auth_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -127,7 +271,7 @@ func (x *CreateTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTokenResponse.ProtoReflect.Descriptor instead.
 func (*CreateTokenResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{1}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CreateTokenResponse) GetToken() string {
@@ -170,7 +314,7 @@ type ValidateTokenRequest struct {
 
 func (x *ValidateTokenRequest) Reset() {
 	*x = ValidateTokenRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[2]
+	mi := &file_auth_v1_auth_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -182,7 +326,7 @@ func (x *ValidateTokenRequest) String() string {
 func (*ValidateTokenRequest) ProtoMessage() {}
 
 func (x *ValidateTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[2]
+	mi := &file_auth_v1_auth_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -195,7 +339,7 @@ func (x *ValidateTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateTokenRequest.ProtoReflect.Descriptor instead.
 func (*ValidateTokenRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{2}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ValidateTokenRequest) GetToken() string {
@@ -241,7 +385,7 @@ type ValidateTokenResponse struct {
 
 func (x *ValidateTokenResponse) Reset() {
 	*x = ValidateTokenResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[3]
+	mi := &file_auth_v1_auth_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -253,7 +397,7 @@ func (x *ValidateTokenResponse) String() string {
 func (*ValidateTokenResponse) ProtoMessage() {}
 
 func (x *ValidateTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[3]
+	mi := &file_auth_v1_auth_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -266,7 +410,7 @@ func (x *ValidateTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateTokenResponse.ProtoReflect.Descriptor instead.
 func (*ValidateTokenResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{3}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ValidateTokenResponse) GetValid() bool {
@@ -328,7 +472,7 @@ type RevokeTokenRequest struct {
 
 func (x *RevokeTokenRequest) Reset() {
 	*x = RevokeTokenRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[4]
+	mi := &file_auth_v1_auth_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -340,7 +484,7 @@ func (x *RevokeTokenRequest) String() string {
 func (*RevokeTokenRequest) ProtoMessage() {}
 
 func (x *RevokeTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[4]
+	mi := &file_auth_v1_auth_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -353,7 +497,7 @@ func (x *RevokeTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeTokenRequest.ProtoReflect.Descriptor instead.
 func (*RevokeTokenRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{4}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *RevokeTokenRequest) GetToken() string {
@@ -379,7 +523,7 @@ type RevokeTokenResponse struct {
 
 func (x *RevokeTokenResponse) Reset() {
 	*x = RevokeTokenResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[5]
+	mi := &file_auth_v1_auth_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -391,7 +535,7 @@ func (x *RevokeTokenResponse) String() string {
 func (*RevokeTokenResponse) ProtoMessage() {}
 
 func (x *RevokeTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[5]
+	mi := &file_auth_v1_auth_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -404,7 +548,7 @@ func (x *RevokeTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeTokenResponse.ProtoReflect.Descriptor instead.
 func (*RevokeTokenResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{5}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RevokeTokenResponse) GetSuccess() bool {
@@ -424,7 +568,7 @@ type RefreshTokenRequest struct {
 
 func (x *RefreshTokenRequest) Reset() {
 	*x = RefreshTokenRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[6]
+	mi := &file_auth_v1_auth_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -436,7 +580,7 @@ func (x *RefreshTokenRequest) String() string {
 func (*RefreshTokenRequest) ProtoMessage() {}
 
 func (x *RefreshTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[6]
+	mi := &file_auth_v1_auth_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +593,7 @@ func (x *RefreshTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshTokenRequest.ProtoReflect.Descriptor instead.
 func (*RefreshTokenRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{6}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RefreshTokenRequest) GetToken() string {
@@ -477,7 +621,7 @@ type RefreshTokenResponse struct {
 
 func (x *RefreshTokenResponse) Reset() {
 	*x = RefreshTokenResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[7]
+	mi := &file_auth_v1_auth_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -489,7 +633,7 @@ func (x *RefreshTokenResponse) String() string {
 func (*RefreshTokenResponse) ProtoMessage() {}
 
 func (x *RefreshTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[7]
+	mi := &file_auth_v1_auth_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -502,7 +646,7 @@ func (x *RefreshTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshTokenResponse.ProtoReflect.Descriptor instead.
 func (*RefreshTokenResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{7}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RefreshTokenResponse) GetToken() string {
@@ -536,7 +680,7 @@ type ListTokensRequest struct {
 
 func (x *ListTokensRequest) Reset() {
 	*x = ListTokensRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[8]
+	mi := &file_auth_v1_auth_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -548,7 +692,7 @@ func (x *ListTokensRequest) String() string {
 func (*ListTokensRequest) ProtoMessage() {}
 
 func (x *ListTokensRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[8]
+	mi := &file_auth_v1_auth_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -561,7 +705,7 @@ func (x *ListTokensRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTokensRequest.ProtoReflect.Descriptor instead.
 func (*ListTokensRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{8}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListTokensRequest) GetIdentity() string {
@@ -588,7 +732,7 @@ type ListTokensResponse struct {
 
 func (x *ListTokensResponse) Reset() {
 	*x = ListTokensResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[9]
+	mi := &file_auth_v1_auth_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -600,7 +744,7 @@ func (x *ListTokensResponse) String() string {
 func (*ListTokensResponse) ProtoMessage() {}
 
 func (x *ListTokensResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[9]
+	mi := &file_auth_v1_auth_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -613,7 +757,7 @@ func (x *ListTokensResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTokensResponse.ProtoReflect.Descriptor instead.
 func (*ListTokensResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{9}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListTokensResponse) GetTokens() []*TokenInfo {
@@ -644,7 +788,7 @@ type TokenInfo struct {
 
 func (x *TokenInfo) Reset() {
 	*x = TokenInfo{}
-	mi := &file_auth_v1_auth_proto_msgTypes[10]
+	mi := &file_auth_v1_auth_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -656,7 +800,7 @@ func (x *TokenInfo) String() string {
 func (*TokenInfo) ProtoMessage() {}
 
 func (x *TokenInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[10]
+	mi := &file_auth_v1_auth_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -669,7 +813,7 @@ func (x *TokenInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TokenInfo.ProtoReflect.Descriptor instead.
 func (*TokenInfo) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{10}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *TokenInfo) GetTokenId() string {
@@ -727,7 +871,7 @@ type CreateAPIKeyRequest struct {
 
 func (x *CreateAPIKeyRequest) Reset() {
 	*x = CreateAPIKeyRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[11]
+	mi := &file_auth_v1_auth_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -739,7 +883,7 @@ func (x *CreateAPIKeyRequest) String() string {
 func (*CreateAPIKeyRequest) ProtoMessage() {}
 
 func (x *CreateAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[11]
+	mi := &file_auth_v1_auth_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -752,7 +896,7 @@ func (x *CreateAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*CreateAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{11}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateAPIKeyRequest) GetName() string {
@@ -801,7 +945,7 @@ type CreateAPIKeyResponse struct {
 
 func (x *CreateAPIKeyResponse) Reset() {
 	*x = CreateAPIKeyResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[12]
+	mi := &file_auth_v1_auth_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -813,7 +957,7 @@ func (x *CreateAPIKeyResponse) String() string {
 func (*CreateAPIKeyResponse) ProtoMessage() {}
 
 func (x *CreateAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[12]
+	mi := &file_auth_v1_auth_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -826,7 +970,7 @@ func (x *CreateAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*CreateAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{12}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateAPIKeyResponse) GetApiKey() string {
@@ -861,7 +1005,7 @@ type ValidateAPIKeyRequest struct {
 
 func (x *ValidateAPIKeyRequest) Reset() {
 	*x = ValidateAPIKeyRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[13]
+	mi := &file_auth_v1_auth_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -873,7 +1017,7 @@ func (x *ValidateAPIKeyRequest) String() string {
 func (*ValidateAPIKeyRequest) ProtoMessage() {}
 
 func (x *ValidateAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[13]
+	mi := &file_auth_v1_auth_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -886,7 +1030,7 @@ func (x *ValidateAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*ValidateAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{13}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ValidateAPIKeyRequest) GetApiKey() string {
@@ -923,7 +1067,7 @@ type ValidateAPIKeyResponse struct {
 
 func (x *ValidateAPIKeyResponse) Reset() {
 	*x = ValidateAPIKeyResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[14]
+	mi := &file_auth_v1_auth_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -935,7 +1079,7 @@ func (x *ValidateAPIKeyResponse) String() string {
 func (*ValidateAPIKeyResponse) ProtoMessage() {}
 
 func (x *ValidateAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[14]
+	mi := &file_auth_v1_auth_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -948,7 +1092,7 @@ func (x *ValidateAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*ValidateAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{14}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ValidateAPIKeyResponse) GetValid() bool {
@@ -995,7 +1139,7 @@ type RevokeAPIKeyRequest struct {
 
 func (x *RevokeAPIKeyRequest) Reset() {
 	*x = RevokeAPIKeyRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[15]
+	mi := &file_auth_v1_auth_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1007,7 +1151,7 @@ func (x *RevokeAPIKeyRequest) String() string {
 func (*RevokeAPIKeyRequest) ProtoMessage() {}
 
 func (x *RevokeAPIKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[15]
+	mi := &file_auth_v1_auth_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1020,7 +1164,7 @@ func (x *RevokeAPIKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAPIKeyRequest.ProtoReflect.Descriptor instead.
 func (*RevokeAPIKeyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{15}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *RevokeAPIKeyRequest) GetKeyId() string {
@@ -1039,7 +1183,7 @@ type RevokeAPIKeyResponse struct {
 
 func (x *RevokeAPIKeyResponse) Reset() {
 	*x = RevokeAPIKeyResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[16]
+	mi := &file_auth_v1_auth_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1051,7 +1195,7 @@ func (x *RevokeAPIKeyResponse) String() string {
 func (*RevokeAPIKeyResponse) ProtoMessage() {}
 
 func (x *RevokeAPIKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[16]
+	mi := &file_auth_v1_auth_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1064,7 +1208,7 @@ func (x *RevokeAPIKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeAPIKeyResponse.ProtoReflect.Descriptor instead.
 func (*RevokeAPIKeyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{16}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RevokeAPIKeyResponse) GetSuccess() bool {
@@ -1084,7 +1228,7 @@ type ListAPIKeysRequest struct {
 
 func (x *ListAPIKeysRequest) Reset() {
 	*x = ListAPIKeysRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[17]
+	mi := &file_auth_v1_auth_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1096,7 +1240,7 @@ func (x *ListAPIKeysRequest) String() string {
 func (*ListAPIKeysRequest) ProtoMessage() {}
 
 func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[17]
+	mi := &file_auth_v1_auth_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1109,7 +1253,7 @@ func (x *ListAPIKeysRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAPIKeysRequest.ProtoReflect.Descriptor instead.
 func (*ListAPIKeysRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{17}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListAPIKeysRequest) GetIdentity() string {
@@ -1136,7 +1280,7 @@ type ListAPIKeysResponse struct {
 
 func (x *ListAPIKeysResponse) Reset() {
 	*x = ListAPIKeysResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[18]
+	mi := &file_auth_v1_auth_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1148,7 +1292,7 @@ func (x *ListAPIKeysResponse) String() string {
 func (*ListAPIKeysResponse) ProtoMessage() {}
 
 func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[18]
+	mi := &file_auth_v1_auth_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1161,7 +1305,7 @@ func (x *ListAPIKeysResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAPIKeysResponse.ProtoReflect.Descriptor instead.
 func (*ListAPIKeysResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{18}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListAPIKeysResponse) GetApiKeys() []*APIKeyInfo {
@@ -1193,7 +1337,7 @@ type APIKeyInfo struct {
 
 func (x *APIKeyInfo) Reset() {
 	*x = APIKeyInfo{}
-	mi := &file_auth_v1_auth_proto_msgTypes[19]
+	mi := &file_auth_v1_auth_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1205,7 +1349,7 @@ func (x *APIKeyInfo) String() string {
 func (*APIKeyInfo) ProtoMessage() {}
 
 func (x *APIKeyInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[19]
+	mi := &file_auth_v1_auth_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1218,7 +1362,7 @@ func (x *APIKeyInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use APIKeyInfo.ProtoReflect.Descriptor instead.
 func (*APIKeyInfo) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{19}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *APIKeyInfo) GetKeyId() string {
@@ -1281,7 +1425,7 @@ type CreatePolicyRequest struct {
 
 func (x *CreatePolicyRequest) Reset() {
 	*x = CreatePolicyRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[20]
+	mi := &file_auth_v1_auth_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1293,7 +1437,7 @@ func (x *CreatePolicyRequest) String() string {
 func (*CreatePolicyRequest) ProtoMessage() {}
 
 func (x *CreatePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[20]
+	mi := &file_auth_v1_auth_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1306,7 +1450,7 @@ func (x *CreatePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePolicyRequest.ProtoReflect.Descriptor instead.
 func (*CreatePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{20}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CreatePolicyRequest) GetName() string {
@@ -1340,7 +1484,7 @@ type CreatePolicyResponse struct {
 
 func (x *CreatePolicyResponse) Reset() {
 	*x = CreatePolicyResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[21]
+	mi := &file_auth_v1_auth_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1352,7 +1496,7 @@ func (x *CreatePolicyResponse) String() string {
 func (*CreatePolicyResponse) ProtoMessage() {}
 
 func (x *CreatePolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[21]
+	mi := &file_auth_v1_auth_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1365,7 +1509,7 @@ func (x *CreatePolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePolicyResponse.ProtoReflect.Descriptor instead.
 func (*CreatePolicyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{21}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CreatePolicyResponse) GetName() string {
@@ -1391,7 +1535,7 @@ type GetPolicyRequest struct {
 
 func (x *GetPolicyRequest) Reset() {
 	*x = GetPolicyRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[22]
+	mi := &file_auth_v1_auth_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1403,7 +1547,7 @@ func (x *GetPolicyRequest) String() string {
 func (*GetPolicyRequest) ProtoMessage() {}
 
 func (x *GetPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[22]
+	mi := &file_auth_v1_auth_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1416,7 +1560,7 @@ func (x *GetPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPolicyRequest.ProtoReflect.Descriptor instead.
 func (*GetPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{22}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetPolicyRequest) GetName() string {
@@ -1435,7 +1579,7 @@ type GetPolicyResponse struct {
 
 func (x *GetPolicyResponse) Reset() {
 	*x = GetPolicyResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[23]
+	mi := &file_auth_v1_auth_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1447,7 +1591,7 @@ func (x *GetPolicyResponse) String() string {
 func (*GetPolicyResponse) ProtoMessage() {}
 
 func (x *GetPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[23]
+	mi := &file_auth_v1_auth_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1460,7 +1604,7 @@ func (x *GetPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPolicyResponse.ProtoReflect.Descriptor instead.
 func (*GetPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{23}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetPolicyResponse) GetPolicy() *Policy {
@@ -1481,7 +1625,7 @@ type UpdatePolicyRequest struct {
 
 func (x *UpdatePolicyRequest) Reset() {
 	*x = UpdatePolicyRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[24]
+	mi := &file_auth_v1_auth_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1493,7 +1637,7 @@ func (x *UpdatePolicyRequest) String() string {
 func (*UpdatePolicyRequest) ProtoMessage() {}
 
 func (x *UpdatePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[24]
+	mi := &file_auth_v1_auth_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1506,7 +1650,7 @@ func (x *UpdatePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePolicyRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{24}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *UpdatePolicyRequest) GetName() string {
@@ -1540,7 +1684,7 @@ type UpdatePolicyResponse struct {
 
 func (x *UpdatePolicyResponse) Reset() {
 	*x = UpdatePolicyResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[25]
+	mi := &file_auth_v1_auth_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1552,7 +1696,7 @@ func (x *UpdatePolicyResponse) String() string {
 func (*UpdatePolicyResponse) ProtoMessage() {}
 
 func (x *UpdatePolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[25]
+	mi := &file_auth_v1_auth_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1565,7 +1709,7 @@ func (x *UpdatePolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePolicyResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePolicyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{25}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UpdatePolicyResponse) GetName() string {
@@ -1591,7 +1735,7 @@ type DeletePolicyRequest struct {
 
 func (x *DeletePolicyRequest) Reset() {
 	*x = DeletePolicyRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[26]
+	mi := &file_auth_v1_auth_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1603,7 +1747,7 @@ func (x *DeletePolicyRequest) String() string {
 func (*DeletePolicyRequest) ProtoMessage() {}
 
 func (x *DeletePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[26]
+	mi := &file_auth_v1_auth_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1616,7 +1760,7 @@ func (x *DeletePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePolicyRequest.ProtoReflect.Descriptor instead.
 func (*DeletePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{26}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *DeletePolicyRequest) GetName() string {
@@ -1635,7 +1779,7 @@ type DeletePolicyResponse struct {
 
 func (x *DeletePolicyResponse) Reset() {
 	*x = DeletePolicyResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[27]
+	mi := &file_auth_v1_auth_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1647,7 +1791,7 @@ func (x *DeletePolicyResponse) String() string {
 func (*DeletePolicyResponse) ProtoMessage() {}
 
 func (x *DeletePolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[27]
+	mi := &file_auth_v1_auth_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1660,7 +1804,7 @@ func (x *DeletePolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePolicyResponse.ProtoReflect.Descriptor instead.
 func (*DeletePolicyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{27}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *DeletePolicyResponse) GetSuccess() bool {
@@ -1679,7 +1823,7 @@ type ListPoliciesRequest struct {
 
 func (x *ListPoliciesRequest) Reset() {
 	*x = ListPoliciesRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[28]
+	mi := &file_auth_v1_auth_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1691,7 +1835,7 @@ func (x *ListPoliciesRequest) String() string {
 func (*ListPoliciesRequest) ProtoMessage() {}
 
 func (x *ListPoliciesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[28]
+	mi := &file_auth_v1_auth_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1704,7 +1848,7 @@ func (x *ListPoliciesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPoliciesRequest.ProtoReflect.Descriptor instead.
 func (*ListPoliciesRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{28}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListPoliciesRequest) GetPagination() *v1.PaginationRequest {
@@ -1724,7 +1868,7 @@ type ListPoliciesResponse struct {
 
 func (x *ListPoliciesResponse) Reset() {
 	*x = ListPoliciesResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[29]
+	mi := &file_auth_v1_auth_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1736,7 +1880,7 @@ func (x *ListPoliciesResponse) String() string {
 func (*ListPoliciesResponse) ProtoMessage() {}
 
 func (x *ListPoliciesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[29]
+	mi := &file_auth_v1_auth_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1749,7 +1893,7 @@ func (x *ListPoliciesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPoliciesResponse.ProtoReflect.Descriptor instead.
 func (*ListPoliciesResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{29}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListPoliciesResponse) GetPolicies() []*Policy {
@@ -1778,7 +1922,7 @@ type EvaluatePolicyRequest struct {
 
 func (x *EvaluatePolicyRequest) Reset() {
 	*x = EvaluatePolicyRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[30]
+	mi := &file_auth_v1_auth_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1790,7 +1934,7 @@ func (x *EvaluatePolicyRequest) String() string {
 func (*EvaluatePolicyRequest) ProtoMessage() {}
 
 func (x *EvaluatePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[30]
+	mi := &file_auth_v1_auth_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1803,7 +1947,7 @@ func (x *EvaluatePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvaluatePolicyRequest.ProtoReflect.Descriptor instead.
 func (*EvaluatePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{30}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *EvaluatePolicyRequest) GetPolicies() []string {
@@ -1845,7 +1989,7 @@ type EvaluatePolicyResponse struct {
 
 func (x *EvaluatePolicyResponse) Reset() {
 	*x = EvaluatePolicyResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[31]
+	mi := &file_auth_v1_auth_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1857,7 +2001,7 @@ func (x *EvaluatePolicyResponse) String() string {
 func (*EvaluatePolicyResponse) ProtoMessage() {}
 
 func (x *EvaluatePolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[31]
+	mi := &file_auth_v1_auth_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1870,7 +2014,7 @@ func (x *EvaluatePolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvaluatePolicyResponse.ProtoReflect.Descriptor instead.
 func (*EvaluatePolicyResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{31}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *EvaluatePolicyResponse) GetAllowed() bool {
@@ -1908,7 +2052,7 @@ type Policy struct {
 
 func (x *Policy) Reset() {
 	*x = Policy{}
-	mi := &file_auth_v1_auth_proto_msgTypes[32]
+	mi := &file_auth_v1_auth_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1920,7 +2064,7 @@ func (x *Policy) String() string {
 func (*Policy) ProtoMessage() {}
 
 func (x *Policy) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[32]
+	mi := &file_auth_v1_auth_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1933,7 +2077,7 @@ func (x *Policy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Policy.ProtoReflect.Descriptor instead.
 func (*Policy) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{32}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *Policy) GetName() string {
@@ -1982,7 +2126,7 @@ type PolicyRule struct {
 
 func (x *PolicyRule) Reset() {
 	*x = PolicyRule{}
-	mi := &file_auth_v1_auth_proto_msgTypes[33]
+	mi := &file_auth_v1_auth_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1994,7 +2138,7 @@ func (x *PolicyRule) String() string {
 func (*PolicyRule) ProtoMessage() {}
 
 func (x *PolicyRule) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[33]
+	mi := &file_auth_v1_auth_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2007,7 +2151,7 @@ func (x *PolicyRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyRule.ProtoReflect.Descriptor instead.
 func (*PolicyRule) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{33}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *PolicyRule) GetPath() string {
@@ -2035,7 +2179,19 @@ var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x16common/v1/common.proto\"\xf1\x01\n" +
+	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x16common/v1/common.proto\"M\n" +
+	"\x13AuthenticateRequest\x12\x1a\n" +
+	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"\xf0\x01\n" +
+	"\x14AuthenticateResponse\x12!\n" +
+	"\fclient_token\x18\x01 \x01(\tR\vclientToken\x12\x19\n" +
+	"\btoken_id\x18\x02 \x01(\tR\atokenId\x12\x1a\n" +
+	"\baccessor\x18\x03 \x01(\tR\baccessor\x12\x1a\n" +
+	"\bpolicies\x18\x04 \x03(\tR\bpolicies\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x05 \x01(\x03R\texpiresAt\x12%\n" +
+	"\x0elease_duration\x18\x06 \x01(\x03R\rleaseDuration\x12\x1c\n" +
+	"\trenewable\x18\a \x01(\bR\trenewable\"\xf1\x01\n" +
 	"\x12CreateTokenRequest\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\tR\bidentity\x12\x1a\n" +
 	"\bpolicies\x18\x02 \x03(\tR\bpolicies\x12\x1f\n" +
@@ -2215,8 +2371,9 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"conditions\x1a=\n" +
 	"\x0fConditionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\x87\t\n" +
-	"\vAuthService\x12H\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xd4\t\n" +
+	"\vAuthService\x12K\n" +
+	"\fAuthenticate\x12\x1c.auth.v1.AuthenticateRequest\x1a\x1d.auth.v1.AuthenticateResponse\x12H\n" +
 	"\vCreateToken\x12\x1b.auth.v1.CreateTokenRequest\x1a\x1c.auth.v1.CreateTokenResponse\x12N\n" +
 	"\rValidateToken\x12\x1d.auth.v1.ValidateTokenRequest\x1a\x1e.auth.v1.ValidateTokenResponse\x12H\n" +
 	"\vRevokeToken\x12\x1b.auth.v1.RevokeTokenRequest\x1a\x1c.auth.v1.RevokeTokenResponse\x12K\n" +
@@ -2247,101 +2404,105 @@ func file_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_auth_v1_auth_proto_rawDescData
 }
 
-var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
+var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_auth_v1_auth_proto_goTypes = []any{
-	(*CreateTokenRequest)(nil),     // 0: auth.v1.CreateTokenRequest
-	(*CreateTokenResponse)(nil),    // 1: auth.v1.CreateTokenResponse
-	(*ValidateTokenRequest)(nil),   // 2: auth.v1.ValidateTokenRequest
-	(*ValidateTokenResponse)(nil),  // 3: auth.v1.ValidateTokenResponse
-	(*RevokeTokenRequest)(nil),     // 4: auth.v1.RevokeTokenRequest
-	(*RevokeTokenResponse)(nil),    // 5: auth.v1.RevokeTokenResponse
-	(*RefreshTokenRequest)(nil),    // 6: auth.v1.RefreshTokenRequest
-	(*RefreshTokenResponse)(nil),   // 7: auth.v1.RefreshTokenResponse
-	(*ListTokensRequest)(nil),      // 8: auth.v1.ListTokensRequest
-	(*ListTokensResponse)(nil),     // 9: auth.v1.ListTokensResponse
-	(*TokenInfo)(nil),              // 10: auth.v1.TokenInfo
-	(*CreateAPIKeyRequest)(nil),    // 11: auth.v1.CreateAPIKeyRequest
-	(*CreateAPIKeyResponse)(nil),   // 12: auth.v1.CreateAPIKeyResponse
-	(*ValidateAPIKeyRequest)(nil),  // 13: auth.v1.ValidateAPIKeyRequest
-	(*ValidateAPIKeyResponse)(nil), // 14: auth.v1.ValidateAPIKeyResponse
-	(*RevokeAPIKeyRequest)(nil),    // 15: auth.v1.RevokeAPIKeyRequest
-	(*RevokeAPIKeyResponse)(nil),   // 16: auth.v1.RevokeAPIKeyResponse
-	(*ListAPIKeysRequest)(nil),     // 17: auth.v1.ListAPIKeysRequest
-	(*ListAPIKeysResponse)(nil),    // 18: auth.v1.ListAPIKeysResponse
-	(*APIKeyInfo)(nil),             // 19: auth.v1.APIKeyInfo
-	(*CreatePolicyRequest)(nil),    // 20: auth.v1.CreatePolicyRequest
-	(*CreatePolicyResponse)(nil),   // 21: auth.v1.CreatePolicyResponse
-	(*GetPolicyRequest)(nil),       // 22: auth.v1.GetPolicyRequest
-	(*GetPolicyResponse)(nil),      // 23: auth.v1.GetPolicyResponse
-	(*UpdatePolicyRequest)(nil),    // 24: auth.v1.UpdatePolicyRequest
-	(*UpdatePolicyResponse)(nil),   // 25: auth.v1.UpdatePolicyResponse
-	(*DeletePolicyRequest)(nil),    // 26: auth.v1.DeletePolicyRequest
-	(*DeletePolicyResponse)(nil),   // 27: auth.v1.DeletePolicyResponse
-	(*ListPoliciesRequest)(nil),    // 28: auth.v1.ListPoliciesRequest
-	(*ListPoliciesResponse)(nil),   // 29: auth.v1.ListPoliciesResponse
-	(*EvaluatePolicyRequest)(nil),  // 30: auth.v1.EvaluatePolicyRequest
-	(*EvaluatePolicyResponse)(nil), // 31: auth.v1.EvaluatePolicyResponse
-	(*Policy)(nil),                 // 32: auth.v1.Policy
-	(*PolicyRule)(nil),             // 33: auth.v1.PolicyRule
-	nil,                            // 34: auth.v1.CreateTokenRequest.MetadataEntry
-	nil,                            // 35: auth.v1.ValidateTokenResponse.MetadataEntry
-	nil,                            // 36: auth.v1.CreateAPIKeyRequest.MetadataEntry
-	nil,                            // 37: auth.v1.EvaluatePolicyRequest.ContextEntry
-	nil,                            // 38: auth.v1.PolicyRule.ConditionsEntry
-	(*v1.PaginationRequest)(nil),   // 39: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),  // 40: common.v1.PaginationResponse
+	(*AuthenticateRequest)(nil),    // 0: auth.v1.AuthenticateRequest
+	(*AuthenticateResponse)(nil),   // 1: auth.v1.AuthenticateResponse
+	(*CreateTokenRequest)(nil),     // 2: auth.v1.CreateTokenRequest
+	(*CreateTokenResponse)(nil),    // 3: auth.v1.CreateTokenResponse
+	(*ValidateTokenRequest)(nil),   // 4: auth.v1.ValidateTokenRequest
+	(*ValidateTokenResponse)(nil),  // 5: auth.v1.ValidateTokenResponse
+	(*RevokeTokenRequest)(nil),     // 6: auth.v1.RevokeTokenRequest
+	(*RevokeTokenResponse)(nil),    // 7: auth.v1.RevokeTokenResponse
+	(*RefreshTokenRequest)(nil),    // 8: auth.v1.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),   // 9: auth.v1.RefreshTokenResponse
+	(*ListTokensRequest)(nil),      // 10: auth.v1.ListTokensRequest
+	(*ListTokensResponse)(nil),     // 11: auth.v1.ListTokensResponse
+	(*TokenInfo)(nil),              // 12: auth.v1.TokenInfo
+	(*CreateAPIKeyRequest)(nil),    // 13: auth.v1.CreateAPIKeyRequest
+	(*CreateAPIKeyResponse)(nil),   // 14: auth.v1.CreateAPIKeyResponse
+	(*ValidateAPIKeyRequest)(nil),  // 15: auth.v1.ValidateAPIKeyRequest
+	(*ValidateAPIKeyResponse)(nil), // 16: auth.v1.ValidateAPIKeyResponse
+	(*RevokeAPIKeyRequest)(nil),    // 17: auth.v1.RevokeAPIKeyRequest
+	(*RevokeAPIKeyResponse)(nil),   // 18: auth.v1.RevokeAPIKeyResponse
+	(*ListAPIKeysRequest)(nil),     // 19: auth.v1.ListAPIKeysRequest
+	(*ListAPIKeysResponse)(nil),    // 20: auth.v1.ListAPIKeysResponse
+	(*APIKeyInfo)(nil),             // 21: auth.v1.APIKeyInfo
+	(*CreatePolicyRequest)(nil),    // 22: auth.v1.CreatePolicyRequest
+	(*CreatePolicyResponse)(nil),   // 23: auth.v1.CreatePolicyResponse
+	(*GetPolicyRequest)(nil),       // 24: auth.v1.GetPolicyRequest
+	(*GetPolicyResponse)(nil),      // 25: auth.v1.GetPolicyResponse
+	(*UpdatePolicyRequest)(nil),    // 26: auth.v1.UpdatePolicyRequest
+	(*UpdatePolicyResponse)(nil),   // 27: auth.v1.UpdatePolicyResponse
+	(*DeletePolicyRequest)(nil),    // 28: auth.v1.DeletePolicyRequest
+	(*DeletePolicyResponse)(nil),   // 29: auth.v1.DeletePolicyResponse
+	(*ListPoliciesRequest)(nil),    // 30: auth.v1.ListPoliciesRequest
+	(*ListPoliciesResponse)(nil),   // 31: auth.v1.ListPoliciesResponse
+	(*EvaluatePolicyRequest)(nil),  // 32: auth.v1.EvaluatePolicyRequest
+	(*EvaluatePolicyResponse)(nil), // 33: auth.v1.EvaluatePolicyResponse
+	(*Policy)(nil),                 // 34: auth.v1.Policy
+	(*PolicyRule)(nil),             // 35: auth.v1.PolicyRule
+	nil,                            // 36: auth.v1.CreateTokenRequest.MetadataEntry
+	nil,                            // 37: auth.v1.ValidateTokenResponse.MetadataEntry
+	nil,                            // 38: auth.v1.CreateAPIKeyRequest.MetadataEntry
+	nil,                            // 39: auth.v1.EvaluatePolicyRequest.ContextEntry
+	nil,                            // 40: auth.v1.PolicyRule.ConditionsEntry
+	(*v1.PaginationRequest)(nil),   // 41: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),  // 42: common.v1.PaginationResponse
 }
 var file_auth_v1_auth_proto_depIdxs = []int32{
-	34, // 0: auth.v1.CreateTokenRequest.metadata:type_name -> auth.v1.CreateTokenRequest.MetadataEntry
-	35, // 1: auth.v1.ValidateTokenResponse.metadata:type_name -> auth.v1.ValidateTokenResponse.MetadataEntry
-	39, // 2: auth.v1.ListTokensRequest.pagination:type_name -> common.v1.PaginationRequest
-	10, // 3: auth.v1.ListTokensResponse.tokens:type_name -> auth.v1.TokenInfo
-	40, // 4: auth.v1.ListTokensResponse.pagination:type_name -> common.v1.PaginationResponse
-	36, // 5: auth.v1.CreateAPIKeyRequest.metadata:type_name -> auth.v1.CreateAPIKeyRequest.MetadataEntry
-	39, // 6: auth.v1.ListAPIKeysRequest.pagination:type_name -> common.v1.PaginationRequest
-	19, // 7: auth.v1.ListAPIKeysResponse.api_keys:type_name -> auth.v1.APIKeyInfo
-	40, // 8: auth.v1.ListAPIKeysResponse.pagination:type_name -> common.v1.PaginationResponse
-	33, // 9: auth.v1.CreatePolicyRequest.rules:type_name -> auth.v1.PolicyRule
-	32, // 10: auth.v1.GetPolicyResponse.policy:type_name -> auth.v1.Policy
-	33, // 11: auth.v1.UpdatePolicyRequest.rules:type_name -> auth.v1.PolicyRule
-	39, // 12: auth.v1.ListPoliciesRequest.pagination:type_name -> common.v1.PaginationRequest
-	32, // 13: auth.v1.ListPoliciesResponse.policies:type_name -> auth.v1.Policy
-	40, // 14: auth.v1.ListPoliciesResponse.pagination:type_name -> common.v1.PaginationResponse
-	37, // 15: auth.v1.EvaluatePolicyRequest.context:type_name -> auth.v1.EvaluatePolicyRequest.ContextEntry
-	33, // 16: auth.v1.Policy.rules:type_name -> auth.v1.PolicyRule
-	38, // 17: auth.v1.PolicyRule.conditions:type_name -> auth.v1.PolicyRule.ConditionsEntry
-	0,  // 18: auth.v1.AuthService.CreateToken:input_type -> auth.v1.CreateTokenRequest
-	2,  // 19: auth.v1.AuthService.ValidateToken:input_type -> auth.v1.ValidateTokenRequest
-	4,  // 20: auth.v1.AuthService.RevokeToken:input_type -> auth.v1.RevokeTokenRequest
-	6,  // 21: auth.v1.AuthService.RefreshToken:input_type -> auth.v1.RefreshTokenRequest
-	8,  // 22: auth.v1.AuthService.ListTokens:input_type -> auth.v1.ListTokensRequest
-	11, // 23: auth.v1.AuthService.CreateAPIKey:input_type -> auth.v1.CreateAPIKeyRequest
-	13, // 24: auth.v1.AuthService.ValidateAPIKey:input_type -> auth.v1.ValidateAPIKeyRequest
-	15, // 25: auth.v1.AuthService.RevokeAPIKey:input_type -> auth.v1.RevokeAPIKeyRequest
-	17, // 26: auth.v1.AuthService.ListAPIKeys:input_type -> auth.v1.ListAPIKeysRequest
-	20, // 27: auth.v1.AuthService.CreatePolicy:input_type -> auth.v1.CreatePolicyRequest
-	22, // 28: auth.v1.AuthService.GetPolicy:input_type -> auth.v1.GetPolicyRequest
-	24, // 29: auth.v1.AuthService.UpdatePolicy:input_type -> auth.v1.UpdatePolicyRequest
-	26, // 30: auth.v1.AuthService.DeletePolicy:input_type -> auth.v1.DeletePolicyRequest
-	28, // 31: auth.v1.AuthService.ListPolicies:input_type -> auth.v1.ListPoliciesRequest
-	30, // 32: auth.v1.AuthService.EvaluatePolicy:input_type -> auth.v1.EvaluatePolicyRequest
-	1,  // 33: auth.v1.AuthService.CreateToken:output_type -> auth.v1.CreateTokenResponse
-	3,  // 34: auth.v1.AuthService.ValidateToken:output_type -> auth.v1.ValidateTokenResponse
-	5,  // 35: auth.v1.AuthService.RevokeToken:output_type -> auth.v1.RevokeTokenResponse
-	7,  // 36: auth.v1.AuthService.RefreshToken:output_type -> auth.v1.RefreshTokenResponse
-	9,  // 37: auth.v1.AuthService.ListTokens:output_type -> auth.v1.ListTokensResponse
-	12, // 38: auth.v1.AuthService.CreateAPIKey:output_type -> auth.v1.CreateAPIKeyResponse
-	14, // 39: auth.v1.AuthService.ValidateAPIKey:output_type -> auth.v1.ValidateAPIKeyResponse
-	16, // 40: auth.v1.AuthService.RevokeAPIKey:output_type -> auth.v1.RevokeAPIKeyResponse
-	18, // 41: auth.v1.AuthService.ListAPIKeys:output_type -> auth.v1.ListAPIKeysResponse
-	21, // 42: auth.v1.AuthService.CreatePolicy:output_type -> auth.v1.CreatePolicyResponse
-	23, // 43: auth.v1.AuthService.GetPolicy:output_type -> auth.v1.GetPolicyResponse
-	25, // 44: auth.v1.AuthService.UpdatePolicy:output_type -> auth.v1.UpdatePolicyResponse
-	27, // 45: auth.v1.AuthService.DeletePolicy:output_type -> auth.v1.DeletePolicyResponse
-	29, // 46: auth.v1.AuthService.ListPolicies:output_type -> auth.v1.ListPoliciesResponse
-	31, // 47: auth.v1.AuthService.EvaluatePolicy:output_type -> auth.v1.EvaluatePolicyResponse
-	33, // [33:48] is the sub-list for method output_type
-	18, // [18:33] is the sub-list for method input_type
+	36, // 0: auth.v1.CreateTokenRequest.metadata:type_name -> auth.v1.CreateTokenRequest.MetadataEntry
+	37, // 1: auth.v1.ValidateTokenResponse.metadata:type_name -> auth.v1.ValidateTokenResponse.MetadataEntry
+	41, // 2: auth.v1.ListTokensRequest.pagination:type_name -> common.v1.PaginationRequest
+	12, // 3: auth.v1.ListTokensResponse.tokens:type_name -> auth.v1.TokenInfo
+	42, // 4: auth.v1.ListTokensResponse.pagination:type_name -> common.v1.PaginationResponse
+	38, // 5: auth.v1.CreateAPIKeyRequest.metadata:type_name -> auth.v1.CreateAPIKeyRequest.MetadataEntry
+	41, // 6: auth.v1.ListAPIKeysRequest.pagination:type_name -> common.v1.PaginationRequest
+	21, // 7: auth.v1.ListAPIKeysResponse.api_keys:type_name -> auth.v1.APIKeyInfo
+	42, // 8: auth.v1.ListAPIKeysResponse.pagination:type_name -> common.v1.PaginationResponse
+	35, // 9: auth.v1.CreatePolicyRequest.rules:type_name -> auth.v1.PolicyRule
+	34, // 10: auth.v1.GetPolicyResponse.policy:type_name -> auth.v1.Policy
+	35, // 11: auth.v1.UpdatePolicyRequest.rules:type_name -> auth.v1.PolicyRule
+	41, // 12: auth.v1.ListPoliciesRequest.pagination:type_name -> common.v1.PaginationRequest
+	34, // 13: auth.v1.ListPoliciesResponse.policies:type_name -> auth.v1.Policy
+	42, // 14: auth.v1.ListPoliciesResponse.pagination:type_name -> common.v1.PaginationResponse
+	39, // 15: auth.v1.EvaluatePolicyRequest.context:type_name -> auth.v1.EvaluatePolicyRequest.ContextEntry
+	35, // 16: auth.v1.Policy.rules:type_name -> auth.v1.PolicyRule
+	40, // 17: auth.v1.PolicyRule.conditions:type_name -> auth.v1.PolicyRule.ConditionsEntry
+	0,  // 18: auth.v1.AuthService.Authenticate:input_type -> auth.v1.AuthenticateRequest
+	2,  // 19: auth.v1.AuthService.CreateToken:input_type -> auth.v1.CreateTokenRequest
+	4,  // 20: auth.v1.AuthService.ValidateToken:input_type -> auth.v1.ValidateTokenRequest
+	6,  // 21: auth.v1.AuthService.RevokeToken:input_type -> auth.v1.RevokeTokenRequest
+	8,  // 22: auth.v1.AuthService.RefreshToken:input_type -> auth.v1.RefreshTokenRequest
+	10, // 23: auth.v1.AuthService.ListTokens:input_type -> auth.v1.ListTokensRequest
+	13, // 24: auth.v1.AuthService.CreateAPIKey:input_type -> auth.v1.CreateAPIKeyRequest
+	15, // 25: auth.v1.AuthService.ValidateAPIKey:input_type -> auth.v1.ValidateAPIKeyRequest
+	17, // 26: auth.v1.AuthService.RevokeAPIKey:input_type -> auth.v1.RevokeAPIKeyRequest
+	19, // 27: auth.v1.AuthService.ListAPIKeys:input_type -> auth.v1.ListAPIKeysRequest
+	22, // 28: auth.v1.AuthService.CreatePolicy:input_type -> auth.v1.CreatePolicyRequest
+	24, // 29: auth.v1.AuthService.GetPolicy:input_type -> auth.v1.GetPolicyRequest
+	26, // 30: auth.v1.AuthService.UpdatePolicy:input_type -> auth.v1.UpdatePolicyRequest
+	28, // 31: auth.v1.AuthService.DeletePolicy:input_type -> auth.v1.DeletePolicyRequest
+	30, // 32: auth.v1.AuthService.ListPolicies:input_type -> auth.v1.ListPoliciesRequest
+	32, // 33: auth.v1.AuthService.EvaluatePolicy:input_type -> auth.v1.EvaluatePolicyRequest
+	1,  // 34: auth.v1.AuthService.Authenticate:output_type -> auth.v1.AuthenticateResponse
+	3,  // 35: auth.v1.AuthService.CreateToken:output_type -> auth.v1.CreateTokenResponse
+	5,  // 36: auth.v1.AuthService.ValidateToken:output_type -> auth.v1.ValidateTokenResponse
+	7,  // 37: auth.v1.AuthService.RevokeToken:output_type -> auth.v1.RevokeTokenResponse
+	9,  // 38: auth.v1.AuthService.RefreshToken:output_type -> auth.v1.RefreshTokenResponse
+	11, // 39: auth.v1.AuthService.ListTokens:output_type -> auth.v1.ListTokensResponse
+	14, // 40: auth.v1.AuthService.CreateAPIKey:output_type -> auth.v1.CreateAPIKeyResponse
+	16, // 41: auth.v1.AuthService.ValidateAPIKey:output_type -> auth.v1.ValidateAPIKeyResponse
+	18, // 42: auth.v1.AuthService.RevokeAPIKey:output_type -> auth.v1.RevokeAPIKeyResponse
+	20, // 43: auth.v1.AuthService.ListAPIKeys:output_type -> auth.v1.ListAPIKeysResponse
+	23, // 44: auth.v1.AuthService.CreatePolicy:output_type -> auth.v1.CreatePolicyResponse
+	25, // 45: auth.v1.AuthService.GetPolicy:output_type -> auth.v1.GetPolicyResponse
+	27, // 46: auth.v1.AuthService.UpdatePolicy:output_type -> auth.v1.UpdatePolicyResponse
+	29, // 47: auth.v1.AuthService.DeletePolicy:output_type -> auth.v1.DeletePolicyResponse
+	31, // 48: auth.v1.AuthService.ListPolicies:output_type -> auth.v1.ListPoliciesResponse
+	33, // 49: auth.v1.AuthService.EvaluatePolicy:output_type -> auth.v1.EvaluatePolicyResponse
+	34, // [34:50] is the sub-list for method output_type
+	18, // [18:34] is the sub-list for method input_type
 	18, // [18:18] is the sub-list for extension type_name
 	18, // [18:18] is the sub-list for extension extendee
 	0,  // [0:18] is the sub-list for field type_name
@@ -2358,7 +2519,7 @@ func file_auth_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_v1_auth_proto_rawDesc), len(file_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   39,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

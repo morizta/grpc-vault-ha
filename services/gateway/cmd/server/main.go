@@ -12,12 +12,15 @@ import (
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
 	_ "github.com/pocketsizefund/microservice-vault/pkg/grpcutil/codec" // vtprotobuf codec
 	"github.com/pocketsizefund/microservice-vault/pkg/telemetry/logging"
+	gwauth "github.com/pocketsizefund/microservice-vault/services/gateway/internal/auth"
 	"github.com/pocketsizefund/microservice-vault/services/gateway/internal/config"
 	"github.com/pocketsizefund/microservice-vault/services/gateway/internal/middleware"
 	"github.com/pocketsizefund/microservice-vault/services/gateway/internal/proxy"
@@ -62,8 +65,71 @@ func main() {
 		)
 	}
 
-	// Initialize router
-	httpRouter := router.NewRouter(logger, grpcProxy, cfg, rateLimiter)
+	// Initialize authentication and authorization
+	var authMiddleware *middleware.AuthMiddleware
+	var authorizer *gwauth.Authorizer
+
+	if cfg.Auth.Enabled {
+		logger.Info("Initializing authentication and authorization",
+			zap.String("auth_service", cfg.Services.AuthAddress),
+			zap.Int("token_cache_size", cfg.Auth.TokenCacheSize),
+			zap.Duration("policy_sync_interval", cfg.Auth.PolicySyncInterval),
+		)
+
+		// Connect to auth service with optimized keepalive settings
+		authConn, err := grpc.DialContext(
+			context.Background(),
+			cfg.Services.AuthAddress,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:                30 * time.Second,
+				Timeout:             10 * time.Second,
+				PermitWithoutStream: true,
+			}),
+		)
+		if err != nil {
+			logger.Fatal("Failed to connect to auth service", zap.Error(err))
+		}
+		defer authConn.Close()
+
+		// Create auth client with LRU caching and background policy sync
+		authClient, err := gwauth.NewAuthClient(logger, gwauth.AuthClientConfig{
+			AuthConn:           authConn,
+			TokenCacheSize:     cfg.Auth.TokenCacheSize,
+			TokenCacheTTL:      cfg.Auth.TokenCacheTTL,
+			APIKeyCacheSize:    cfg.Auth.APIKeyCacheSize,
+			APIKeyCacheTTL:     cfg.Auth.APIKeyCacheTTL,
+			PolicySyncInterval: cfg.Auth.PolicySyncInterval,
+		})
+		if err != nil {
+			logger.Fatal("Failed to create auth client", zap.Error(err))
+		}
+		defer authClient.Close()
+
+		// Paths that skip authentication (replicating Vault behavior):
+		// - Health checks: always accessible
+		// - Login: authentication entry point
+		// - Seal status, init, unseal: use Shamir shares instead of tokens
+		skipPaths := []string{
+			"/health/live",
+			"/health/ready",
+			"/status",
+			"/v1/auth/login",
+			"/v1/sys/seal-status",
+			"/v1/sys/init",
+			"/v1/sys/unseal",
+		}
+
+		authMiddleware = middleware.NewAuthMiddleware(authClient, skipPaths)
+		authorizer = gwauth.NewAuthorizer(logger, authClient)
+
+		logger.Info("Authentication and authorization initialized successfully")
+	} else {
+		logger.Warn("Authentication is DISABLED (GATEWAY_AUTH_ENABLED=false)")
+	}
+
+	// Initialize router with auth middleware
+	httpRouter := router.NewRouter(logger, grpcProxy, cfg, rateLimiter, authMiddleware, authorizer)
 
 	// Create HTTP server with optimized settings for high throughput
 	httpServer := &http.Server{

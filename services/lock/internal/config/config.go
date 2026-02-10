@@ -28,9 +28,10 @@ type SealConfig struct {
 
 // StorageConfig holds storage settings
 type StorageConfig struct {
-	Type     string // "memory", "raft", "file"
-	RaftPath string
-	NodeID   string
+	Type       string // "memory", "raft", "file"
+	BoltDBPath string
+	RaftPath   string
+	NodeID     string
 }
 
 // CacheConfig holds cache settings
@@ -52,9 +53,10 @@ func Load() (*Config, error) {
 			Threshold: getEnvInt("LOCK_SEAL_THRESHOLD", 3),
 		},
 		Storage: StorageConfig{
-			Type:     getEnv("LOCK_STORAGE_TYPE", "memory"),
-			RaftPath: getEnv("LOCK_RAFT_PATH", "/data/raft"),
-			NodeID:   getEnv("LOCK_NODE_ID", "node1"),
+			Type:       getEnv("LOCK_STORAGE_TYPE", "memory"),
+			BoltDBPath: getEnv("LOCK_STORAGE_BOLTDB_PATH", "data/lock.db"),
+			RaftPath:   getEnv("LOCK_RAFT_PATH", "/data/raft"),
+			NodeID:     getEnv("LOCK_NODE_ID", "node1"),
 		},
 		Cache: CacheConfig{
 			Type: getEnv("LOCK_CACHE_TYPE", "2q"),

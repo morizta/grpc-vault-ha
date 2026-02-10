@@ -8,7 +8,7 @@ Dokumen ini menjelaskan teknologi yang digunakan dalam microservice vault platfo
 
 ## Core Technology
 
-### Language: Go 1.21+
+### Language: Go 1.24+
 
 **Alasan Pemilihan:**
 - Native concurrency (goroutines, channels)
@@ -20,45 +20,22 @@ Dokumen ini menjelaskan teknologi yang digunakan dalam microservice vault platfo
 
 **Key Libraries:**
 ```go
-// go.mod
-module github.com/yourorg/microservice-vault
+// go.mod (actual)
+module github.com/pocketsizefund/microservice-vault
 
-go 1.21
+go 1.24.0
 
 require (
-    // gRPC & Protobuf
-    google.golang.org/grpc v1.59.0
-    google.golang.org/protobuf v1.31.0
-    github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
-
-    // Database
-    github.com/jackc/pgx/v5 v5.5.0
-    github.com/redis/go-redis/v9 v9.3.0
-
-    // Raft
-    github.com/hashicorp/raft v1.6.0
-    github.com/hashicorp/raft-boltdb/v2 v2.3.0
-
-    // Cryptography
-    golang.org/x/crypto v0.16.0
     github.com/capitalone/fpe v1.2.1
-
-    // JWT
-    github.com/golang-jwt/jwt/v5 v5.2.0
-
-    // Configuration
-    github.com/spf13/viper v1.18.0
-
-    // Observability
-    go.opentelemetry.io/otel v1.21.0
-    go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.21.0
-    github.com/prometheus/client_golang v1.17.0
-    go.uber.org/zap v1.26.0
-
-    // Utilities
-    github.com/hashicorp/golang-lru/v2 v2.0.7
     github.com/gammazero/workerpool v1.1.3
-    golang.org/x/sync v0.5.0
+    github.com/golang-jwt/jwt/v5 v5.2.0
+    github.com/google/uuid v1.6.0
+    github.com/hashicorp/golang-lru/v2 v2.0.7
+    github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10
+    go.uber.org/zap v1.26.0
+    golang.org/x/time v0.5.0
+    google.golang.org/grpc v1.78.0
+    google.golang.org/protobuf v1.36.11
 )
 ```
 
@@ -68,24 +45,15 @@ require (
 
 ### Gateway Service
 
-| Component | Library | Version | Purpose |
-|-----------|---------|---------|---------|
-| HTTP Server | `net/http` | stdlib | REST API |
-| gRPC Gateway | `grpc-gateway/v2` | 2.18.0 | REST → gRPC |
-| Rate Limiter | `go-redis/redis_rate` | 10.0.1 | Distributed rate limiting |
-| Circuit Breaker | `sony/gobreaker` | 0.5.0 | Fault tolerance |
-| Router | `chi` | 5.0.10 | HTTP routing |
-
-```go
-// Gateway specific imports
-import (
-    "github.com/go-chi/chi/v5"
-    "github.com/go-chi/chi/v5/middleware"
-    "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-    "github.com/sony/gobreaker"
-    "github.com/go-redis/redis_rate/v10"
-)
-```
+| Component | Library | Purpose |
+|-----------|---------|---------|
+| HTTP Server | `net/http` (stdlib) | REST API |
+| gRPC Client | `google.golang.org/grpc` | Backend communication |
+| Rate Limiter | `golang.org/x/time/rate` | Per-client rate limiting |
+| Circuit Breaker | Custom (`sony/gobreaker` pattern) | Fault tolerance |
+| Auth Cache | `hashicorp/golang-lru/v2` | Token validation caching |
+| Serialization | `planetscale/vtprotobuf` | Optimized protobuf codec |
+| Logging | `go.uber.org/zap` | Structured logging |
 
 ### Auth Service
 
@@ -554,7 +522,7 @@ clean:
 **Dockerfile Template:**
 ```dockerfile
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -618,7 +586,7 @@ tlsConfig := &tls.Config{
 
 | Component | Version | EOL/Support |
 |-----------|---------|-------------|
-| Go | 1.21 | Feb 2025 |
+| Go | 1.24 | Feb 2026 |
 | PostgreSQL | 15 | Nov 2027 |
 | Redis | 7 | - |
 | Kafka | 3.6 | - |
@@ -688,7 +656,7 @@ All dependencies are compatible with commercial use.
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           TECH STACK SUMMARY                                 │
 │                                                                             │
-│  Language:        Go 1.21+                                                  │
+│  Language:        Go 1.24+                                                  │
 │  Communication:   gRPC + REST (grpc-gateway)                                │
 │  Database:        PostgreSQL 15 (Auth), Raft+BoltDB (Lock)                 │
 │  Cache:           Redis 7                                                   │

@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
+	authv1 "github.com/pocketsizefund/microservice-vault/gen/go/auth/v1"
 	commonv1 "github.com/pocketsizefund/microservice-vault/gen/go/common/v1"
 	cryptov1 "github.com/pocketsizefund/microservice-vault/gen/go/crypto/v1"
 	lockv1 "github.com/pocketsizefund/microservice-vault/gen/go/lock/v1"
@@ -66,6 +70,15 @@ func readJSON(r *http.Request, v interface{}) error {
 	return json.Unmarshal(body, v)
 }
 
+// getIdentityStr returns the authenticated identity string from the request context.
+// Returns "anonymous" if no identity is set (unauthenticated paths).
+func getIdentityStr(r *http.Request) string {
+	if identity, ok := middleware.GetIdentity(r.Context()); ok && identity != nil {
+		return identity.Subject
+	}
+	return "anonymous"
+}
+
 // getConnection gets a gRPC connection to a service
 func (h *GatewayHandler) getConnection(ctx context.Context, service string) (*grpc.ClientConn, error) {
 	var address string
@@ -110,13 +123,9 @@ func (h *GatewayHandler) Encrypt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	identityStr := "anonymous"
-	if identity, ok := middleware.GetIdentity(r.Context()); ok && identity != nil {
-		identityStr = identity.Subject
-	}
-	h.logger.Info("Encrypt request",
+	h.logger.Debug("Encrypt request",
 		zap.String("key_name", req.KeyName),
-		zap.String("identity", identityStr))
+		zap.String("identity", getIdentityStr(r)))
 
 	// Forward to crypto service via gRPC
 	conn, err := h.getConnection(r.Context(), "crypto")
@@ -165,13 +174,9 @@ func (h *GatewayHandler) Decrypt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	identityStr := "anonymous"
-	if identity, ok := middleware.GetIdentity(r.Context()); ok && identity != nil {
-		identityStr = identity.Subject
-	}
-	h.logger.Info("Decrypt request",
+	h.logger.Debug("Decrypt request",
 		zap.String("key_name", req.KeyName),
-		zap.String("identity", identityStr))
+		zap.String("identity", getIdentityStr(r)))
 
 	// Forward to crypto service via gRPC
 	conn, err := h.getConnection(r.Context(), "crypto")
@@ -222,14 +227,10 @@ func (h *GatewayHandler) Tokenize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	identityStr := "anonymous"
-	if identity, ok := middleware.GetIdentity(r.Context()); ok && identity != nil {
-		identityStr = identity.Subject
-	}
-	h.logger.Info("Tokenize request",
+	h.logger.Debug("Tokenize request",
 		zap.String("key_name", req.KeyName),
 		zap.String("transformation", req.Transformation),
-		zap.String("identity", identityStr))
+		zap.String("identity", getIdentityStr(r)))
 
 	// Forward to tokenize service via gRPC
 	conn, err := h.getConnection(r.Context(), "tokenize")
@@ -272,14 +273,10 @@ func (h *GatewayHandler) Detokenize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	identityStr := "anonymous"
-	if identity, ok := middleware.GetIdentity(r.Context()); ok && identity != nil {
-		identityStr = identity.Subject
-	}
-	h.logger.Info("Detokenize request",
+	h.logger.Debug("Detokenize request",
 		zap.String("key_name", req.KeyName),
 		zap.String("transformation", req.Transformation),
-		zap.String("identity", identityStr))
+		zap.String("identity", getIdentityStr(r)))
 
 	// Forward to tokenize service via gRPC
 	conn, err := h.getConnection(r.Context(), "tokenize")
@@ -317,53 +314,119 @@ type SecretRequest struct {
 
 // GetSecret handles GET /v1/secret/data/{path}
 func (h *GatewayHandler) GetSecret(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Query().Get("path")
+	path := strings.TrimPrefix(r.URL.Path, "/v1/secret/data/")
 	if path == "" {
 		writeError(w, http.StatusBadRequest, "path is required")
 		return
 	}
 
-	identityStr := "anonymous"
-	if identity, ok := middleware.GetIdentity(r.Context()); ok && identity != nil {
-		identityStr = identity.Subject
-	}
-	h.logger.Info("Get secret request",
+	h.logger.Debug("Get secret request",
 		zap.String("path", path),
-		zap.String("identity", identityStr))
+		zap.String("identity", getIdentityStr(r)))
 
-	// TODO: Forward to lock service via gRPC
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"data": map[string]interface{}{
-			"data": map[string]string{
-				"key": "value",
-			},
-			"metadata": map[string]interface{}{
-				"version": 1,
-			},
+	conn, err := h.getConnection(r.Context(), "lock")
+	if err != nil {
+		h.logger.Error("Failed to connect to lock service", zap.Error(err))
+		writeError(w, http.StatusServiceUnavailable, "lock service unavailable")
+		return
+	}
+
+	client := lockv1.NewLockServiceClient(conn)
+	resp, err := client.GetSecret(r.Context(), &lockv1.GetSecretRequest{Path: path})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			switch st.Code() {
+			case codes.NotFound:
+				writeError(w, http.StatusNotFound, "secret not found")
+				return
+			case codes.FailedPrecondition:
+				writeError(w, http.StatusServiceUnavailable, st.Message())
+				return
+			}
+		}
+		h.logger.Error("GetSecret failed", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "failed to get secret")
+		return
+	}
+
+	// Convert []byte values to strings for JSON response
+	dataStr := make(map[string]string, len(resp.Data))
+	for k, v := range resp.Data {
+		dataStr[k] = string(v)
+	}
+
+	result := map[string]interface{}{
+		"data": dataStr,
+		"metadata": map[string]interface{}{
+			"path":    resp.Metadata.GetPath(),
+			"version": resp.Metadata.GetVersion(),
 		},
-	})
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"data": result})
 }
 
 // PutSecret handles POST /v1/secret/data/{path}
 func (h *GatewayHandler) PutSecret(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/v1/secret/data/")
+
 	var req SecretRequest
 	if err := readJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	identityStr := "anonymous"
-	if identity, ok := middleware.GetIdentity(r.Context()); ok && identity != nil {
-		identityStr = identity.Subject
+	// Use path from URL, fallback to body
+	if path == "" {
+		path = req.Path
 	}
-	h.logger.Info("Put secret request",
-		zap.String("path", req.Path),
-		zap.String("identity", identityStr))
+	if path == "" {
+		writeError(w, http.StatusBadRequest, "path is required")
+		return
+	}
 
-	// TODO: Forward to lock service via gRPC
+	// Convert data values to bytes for gRPC
+	data := make(map[string][]byte)
+	for k, v := range req.Data {
+		switch val := v.(type) {
+		case string:
+			data[k] = []byte(val)
+		default:
+			b, _ := json.Marshal(val)
+			data[k] = b
+		}
+	}
+
+	h.logger.Debug("Put secret request",
+		zap.String("path", path),
+		zap.String("identity", getIdentityStr(r)))
+
+	conn, err := h.getConnection(r.Context(), "lock")
+	if err != nil {
+		h.logger.Error("Failed to connect to lock service", zap.Error(err))
+		writeError(w, http.StatusServiceUnavailable, "lock service unavailable")
+		return
+	}
+
+	client := lockv1.NewLockServiceClient(conn)
+	resp, err := client.PutSecret(r.Context(), &lockv1.PutSecretRequest{
+		Path: path,
+		Data: data,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if ok && st.Code() == codes.FailedPrecondition {
+			writeError(w, http.StatusServiceUnavailable, st.Message())
+			return
+		}
+		h.logger.Error("PutSecret failed", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "failed to put secret")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"data": map[string]interface{}{
-			"version": 1,
+			"version": resp.Version,
 		},
 	})
 }
@@ -389,15 +452,37 @@ func (h *GatewayHandler) Login(w http.ResponseWriter, r *http.Request) {
 		zap.String("username", req.Username),
 		zap.String("method", req.Method))
 
-	// TODO: Forward to auth service via gRPC
+	conn, err := h.getConnection(r.Context(), "auth")
+	if err != nil {
+		h.logger.Error("Failed to connect to auth service", zap.Error(err))
+		writeError(w, http.StatusServiceUnavailable, "auth service unavailable")
+		return
+	}
+
+	client := authv1.NewAuthServiceClient(conn)
+	resp, err := client.Authenticate(r.Context(), &authv1.AuthenticateRequest{
+		Username: req.Username,
+		Password: req.Password,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if ok && st.Code() == codes.Unauthenticated {
+			writeError(w, http.StatusUnauthorized, "invalid credentials")
+			return
+		}
+		h.logger.Error("Authentication failed", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "authentication failed")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"auth": map[string]interface{}{
-			"client_token":   "hvs.xxx",
-			"accessor":       "xxx",
-			"policies":       []string{"default"},
-			"token_policies": []string{"default"},
-			"lease_duration": 3600,
-			"renewable":      true,
+			"client_token":   resp.ClientToken,
+			"accessor":       resp.Accessor,
+			"policies":       resp.Policies,
+			"token_policies": resp.Policies,
+			"lease_duration": resp.LeaseDuration,
+			"renewable":      resp.Renewable,
 		},
 	})
 }

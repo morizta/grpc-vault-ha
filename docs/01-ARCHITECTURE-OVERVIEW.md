@@ -20,11 +20,11 @@ Platform vault berbasis microservices untuk menyediakan layanan keamanan data en
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                            GATEWAY SERVICE                                  │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐      │
-│  │Rate Limiting │ │Load Balancing│ │   Routing    │ │  TLS Term    │      │
+│  │ Auth/Authz   │ │Rate Limiting │ │   Routing    │ │  TLS Term    │      │
 │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘      │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                        │
-│  │Request Batch │ │Circuit Break │ │  Metrics     │                        │
-│  └──────────────┘ └──────────────┘ └──────────────┘                        │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐      │
+│  │Circuit Break │ │Conn Pooling  │ │  Metrics     │ │  VTProtobuf  │      │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘      │
 └────────────────────────────────────────┬───────────────────────────────────┘
                                          │
            ┌─────────────┬───────────────┼───────────────┬─────────────┐
@@ -57,7 +57,7 @@ Platform vault berbasis microservices untuk menyediakan layanan keamanan data en
 
 ### 1. Separation of Concerns
 Setiap service memiliki single responsibility:
-- **Gateway**: Traffic management & routing
+- **Gateway**: Authentication, authorization, traffic management & routing
 - **Auth**: Identity & access management
 - **Crypto**: Cryptographic operations
 - **Tokenize**: Data tokenization & FPE
@@ -159,12 +159,12 @@ Client ◄── Gateway ◄── Lock (success) ◄─────────
 
 ### Expected Throughput (per instance)
 
-| Service | Operations/sec | Latency (p99) |
+| Service | Operations/sec | Latency (p50) |
 |---------|----------------|---------------|
-| Gateway | 50,000+ | < 5ms |
-| Auth | 20,000+ | < 10ms |
-| Crypto | 10,000+ | < 15ms |
-| Tokenize (FPE) | 15,000+ | < 10ms |
+| Gateway | 48,000+ | ~0.2ms |
+| Auth | 20,000+ | < 1ms (cached) |
+| Crypto (encrypt) | 48,000+ | ~0.2ms |
+| Tokenize (FPE) | 46,000+ | ~0.3ms |
 | Lock | 5,000+ | < 20ms |
 
 ---
@@ -228,20 +228,23 @@ Client ◄── Gateway ◄── Lock (success) ◄─────────
 
 ### Authentication Flow
 ```
-┌────────┐    ┌─────────┐    ┌──────┐    ┌─────────┐
-│ Client │───►│ Gateway │───►│ Auth │───►│ Service │
-└────────┘    └─────────┘    └──────┘    └─────────┘
-    │              │             │            │
-    │  1. Token    │             │            │
-    │─────────────►│  2. Validate│            │
-    │              │────────────►│            │
-    │              │  3. Claims  │            │
-    │              │◄────────────│            │
-    │              │      4. Forward + Claims │
-    │              │─────────────────────────►│
-    │              │      5. Response         │
-    │  6. Response │◄─────────────────────────│
-    │◄─────────────│                          │
+┌────────┐    ┌─────────────────────────────────────┐    ┌──────┐    ┌─────────┐
+│ Client │───►│             Gateway                  │───►│ Auth │───►│ Service │
+└────────┘    │  ┌─────────┐  ┌──────────────────┐  │    └──────┘    └─────────┘
+    │         │  │LRU Cache│  │Policy Evaluator  │  │        │            │
+    │  1.Token│  │(10K,5m) │  │(synced every 30s)│  │        │            │
+    │────────►│  └─────────┘  └──────────────────┘  │        │            │
+    │         │                                     │        │            │
+    │         │  2. Check LRU cache                 │        │            │
+    │         │     HIT → skip auth service call    │        │            │
+    │         │     MISS → validate via gRPC ──────────────►│            │
+    │         │  3. Cache result in LRU             │        │            │
+    │         │  4. Evaluate policy locally          │        │            │
+    │         │     DENY → 403 Forbidden            │        │            │
+    │         │     ALLOW → forward to service ─────────────────────────►│
+    │         │                                     │        │            │
+    │  5. Response                                  │        │            │
+    │◄────────│◄────────────────────────────────────────────────────────│
 ```
 
 ---
