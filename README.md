@@ -183,16 +183,147 @@ All configuration via environment variables:
 | `TOKENIZE_SERVICE_ADDRESS` | localhost:9093 | Tokenize service gRPC address |
 | `LOCK_SERVICE_ADDRESS` | localhost:9094 | Lock service gRPC address |
 
-## Performance Targets
+## Performance Benchmarks
 
-| Operation | Target | Actual |
-|-----------|--------|--------|
-| Encrypt (single) | < 15ms | ~0.2ms (p50) |
-| Encrypt throughput | 10,000/s | **48,824/s** |
-| Tokenize throughput | 10,000/s | **46,000/s** |
-| Auth overhead | < 5% | **~0%** (LRU cached) |
-| FPE Encrypt | < 10ms | ~0.3ms (p50) |
-| Token Validate | < 5ms | < 1ms (cached) |
+### Load Test Results (Baremetal)
+
+**Test Configuration:**
+- Concurrent Connections: 500
+- Duration: 30 seconds
+- Connection Pool: 50 connections (ghz)
+- Test Date: February 12, 2026
+
+#### Direct gRPC Services
+
+| Service | Port | Tool | Throughput | Avg Latency | P50 | P95 | P99 | Total Requests |
+|---------|------|------|------------|-------------|-----|-----|-----|----------------|
+| **Tokenize** | 9093 | ghz | **62,055 req/s** | 3.40 ms | 2.50 ms | 8.83 ms | 12.74 ms | 1,861,735 |
+| **Crypto** | 9092 | ghz | **62,304 req/s** | 3.45 ms | 2.58 ms | 9.11 ms | 13.09 ms | 1,869,188 |
+
+#### HTTP API Gateway
+
+| Endpoint | Port | Tool | Throughput | Avg Latency | P50 | P95 | P99 | Total Requests |
+|----------|------|------|------------|-------------|-----|-----|-----|----------------|
+| `/v1/tokenize/encode` | 8080 | hey | **54,592 req/s** | 15.0 ms | 7.3 ms | 23.2 ms | 35.2 ms | 1,000,000 |
+| `/v1/tokenize/encode` | 8080 | loadtest | **49,396 req/s** | 9.67 ms | 7.87 ms | 23.87 ms | 34.15 ms | 1,482,887 |
+| `/v1/crypto/encrypt` | 8080 | hey | **50,526 req/s** | 15.0 ms | 7.4 ms | 25.9 ms | 40.2 ms | 1,000,000 |
+
+### Key Performance Highlights
+
+✅ **Exceptional Throughput**
+- Direct gRPC: **~62,000 requests/second** with sub-3ms P50 latency
+- HTTP Gateway: **~50,000-54,000 requests/second** with ~7-8ms P50 latency
+- Success Rate: **100%** across all tools and tests (7.2M+ total requests)
+
+✅ **Minimal Gateway Overhead**
+- Throughput drop: ~17-20% (62K → 50-54K req/s)
+- Latency increase: ~4-5ms (acceptable for production)
+- Connection pooling and circuit breaker working efficiently
+
+✅ **Production-Ready Stability**
+- Consistent performance across multiple test runs and tools
+- P99 latency under 41ms even at 500 concurrent connections
+- No degradation or crashes handling 1M+ requests per test
+- Results reproducible and predictable
+
+✅ **Optimizations Applied**
+- VTProtobuf codec for faster serialization
+- 50-connection gRPC pool per service (round-robin)
+- LRU caching for auth tokens and keys (5-min TTL)
+- Circuit breaker preventing cascade failures
+- Fastrand for IV/nonce generation (buffered crypto/rand)
+
+### Benchmarking Commands
+
+#### Direct gRPC Services (ghz)
+
+```bash
+# Test Tokenize Service (gRPC)
+ghz --insecure \
+  --proto api/proto/tokenize/v1/tokenize.proto \
+  --import-paths api/proto \
+  --call tokenize.v1.TokenizeService/FPEEncrypt \
+  -d '{"key_name":"test-key","plaintext":"4111111111111111","transformation":"credit-card"}' \
+  -c 500 -z 30s --connections 50 \
+  localhost:9093
+
+# Test Crypto Service (gRPC)
+ghz --insecure \
+  --proto api/proto/crypto/v1/crypto.proto \
+  --import-paths api/proto \
+  --call crypto.v1.CryptoService/Encrypt \
+  -d '{"key_name":"test-key","plaintext":"SGVsbG8gV29ybGQ="}' \
+  -c 500 -z 30s --connections 50 \
+  localhost:9092
+```
+
+#### HTTP API Gateway (hey)
+
+```bash
+# Test Tokenize Endpoint
+hey -z 30s -c 500 -m POST \
+  -H "Content-Type: application/json" \
+  -d '{"key_name":"test-key","value":"4111111111111111","transformation":"credit-card"}' \
+  http://localhost:8080/v1/tokenize/encode
+
+# Test Crypto Endpoint
+hey -z 30s -c 500 -m POST \
+  -H "Content-Type: application/json" \
+  -d '{"key_name":"test-key","plaintext":"SGVsbG8gV29ybGQ="}' \
+  http://localhost:8080/v1/crypto/encrypt
+```
+
+#### HTTP API Gateway (Custom loadtest tool)
+
+```bash
+# Test Tokenize Endpoint
+loadtest \
+  -url "http://localhost:8080/v1/tokenize/encode" \
+  -body '{"key_name":"test-key","value":"4111111111111111","transformation":"credit-card"}' \
+  -success-field "token" \
+  -duration 30s \
+  -concurrency 500
+
+# Test Crypto Endpoint
+loadtest \
+  -url "http://localhost:8080/v1/crypto/encrypt" \
+  -body '{"key_name":"test-key","plaintext":"SGVsbG8gV29ybGQ="}' \
+  -success-field "ciphertext" \
+  -duration 30s \
+  -concurrency 500
+```
+
+### Prerequisites for Benchmarking
+
+**Tools Required:**
+- `ghz` - gRPC benchmarking tool ([install](https://ghz.sh))
+- `hey` - HTTP load generator ([install](https://github.com/rakyll/hey))
+- `loadtest` - Custom TakaKrypt load test tool (optional)
+
+**Before Running:**
+1. Initialize and unseal the vault:
+   ```bash
+   # Initialize
+   curl -X POST http://localhost:8080/v1/sys/init \
+     -H "Content-Type: application/json" \
+     -d '{"secret_shares": 5, "secret_threshold": 3}'
+
+   # Unseal (use one of the keys from init response)
+   curl -X POST http://localhost:8080/v1/sys/unseal \
+     -H "Content-Type: application/json" \
+     -d '{"key": "YOUR_KEY_HERE"}'
+   ```
+
+2. Create test key:
+   ```bash
+   # Disable auth for testing (or use valid token)
+   export GATEWAY_AUTH_ENABLED=false
+
+   # Create key
+   curl -X POST http://localhost:8080/v1/transit/keys \
+     -H "Content-Type: application/json" \
+     -d '{"name":"test-key","type":"aes256-gcm96"}'
+   ```
 
 ## License
 

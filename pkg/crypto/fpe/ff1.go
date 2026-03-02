@@ -149,13 +149,17 @@ func (c *Cipher) EncryptWithTweak(plaintext string, tweak []byte) (string, error
 		cipher = c.cipher
 	}
 
-	// Encrypt - the library uses string representation
-	encryptedStr, err := cipher.Encrypt(plaintext)
+	// Convert from custom alphabet to base-N numeral string that big.Int can parse.
+	// The capitalone/fpe library uses big.Int.SetString(X, radix) internally, so
+	// each character must represent its index in the alphabet using standard base-N digits.
+	numeralStr := c.alphabetToNumeralStr(plaintext)
+	encryptedNumeral, err := cipher.Encrypt(numeralStr)
 	if err != nil {
 		return "", err
 	}
 
-	return encryptedStr, nil
+	// Convert result back from base-N numeral string to custom alphabet characters
+	return c.numeralStrToAlphabet(encryptedNumeral), nil
 }
 
 // Decrypt decrypts ciphertext using FF1
@@ -187,13 +191,73 @@ func (c *Cipher) DecryptWithTweak(ciphertext string, tweak []byte) (string, erro
 		cipher = c.cipher
 	}
 
-	// Decrypt - the library uses string representation
-	decryptedStr, err := cipher.Decrypt(ciphertext)
+	// Convert from custom alphabet to base-N numeral string
+	numeralStr := c.alphabetToNumeralStr(ciphertext)
+	decryptedNumeral, err := cipher.Decrypt(numeralStr)
 	if err != nil {
 		return "", err
 	}
 
-	return decryptedStr, nil
+	// Convert result back to custom alphabet characters
+	return c.numeralStrToAlphabet(decryptedNumeral), nil
+}
+
+// alphabetToNumeralStr converts custom alphabet string to base-N digit string
+// that big.Int.SetString(X, radix) can parse correctly.
+// Mapping: alphabet index i → digit char using Go's base-62 encoding
+//
+//	0-9   → '0'-'9'
+//	10-35 → 'a'-'z'
+//	36-61 → 'A'-'Z'
+//
+// This is identical to identity for AlphabetNumeric (radix=10), so no behavior change
+// for existing numeric use cases.
+func (c *Cipher) alphabetToNumeralStr(s string) string {
+	result := make([]byte, len(s))
+	for i, char := range s {
+		idx := strings.IndexRune(c.alphabet, char)
+		result[i] = indexToDigitChar(idx)
+	}
+	return string(result)
+}
+
+// numeralStrToAlphabet converts a base-N digit string back to custom alphabet characters
+func (c *Cipher) numeralStrToAlphabet(s string) string {
+	result := make([]byte, len(s))
+	for i, char := range s {
+		idx := digitCharToIndex(char)
+		if idx >= 0 && idx < len(c.alphabet) {
+			result[i] = c.alphabet[idx]
+		}
+	}
+	return string(result)
+}
+
+// indexToDigitChar converts an alphabet index (0-61) to the digit character
+// used by Go's big.Int for that value in any base up to 62.
+func indexToDigitChar(idx int) byte {
+	switch {
+	case idx < 10:
+		return byte('0' + idx)
+	case idx < 36:
+		return byte('a' + (idx - 10))
+	default:
+		return byte('A' + (idx - 36))
+	}
+}
+
+// digitCharToIndex converts a big.Int digit character back to an alphabet index.
+func digitCharToIndex(ch rune) int {
+	switch {
+	case ch >= '0' && ch <= '9':
+		return int(ch - '0')
+	case ch >= 'a' && ch <= 'z':
+		return int(ch-'a') + 10
+	case ch >= 'A' && ch <= 'Z':
+		return int(ch-'A') + 36
+	default:
+		return 0
+	}
 }
 
 // validateString checks if all characters are in the alphabet

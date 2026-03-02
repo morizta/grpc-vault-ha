@@ -211,6 +211,7 @@ type TokenizeRequest struct {
 	KeyName        string `json:"key_name"`
 	Value          string `json:"value"`
 	Transformation string `json:"transformation,omitempty"`
+	Alphabet       string `json:"alphabet,omitempty"` // Custom alphabet (e.g., "abcdefghijklmnopqrstuvwxyz0123456789.@" for email)
 }
 
 // TokenizeResponse represents a tokenize response
@@ -245,6 +246,7 @@ func (h *GatewayHandler) Tokenize(w http.ResponseWriter, r *http.Request) {
 		KeyName:        req.KeyName,
 		Plaintext:      req.Value,
 		Transformation: req.Transformation,
+		Alphabet:       req.Alphabet,
 	})
 	if err != nil {
 		h.logger.Error("Tokenize failed", zap.Error(err))
@@ -263,6 +265,7 @@ type DetokenizeRequest struct {
 	KeyName        string `json:"key_name"`
 	Token          string `json:"token"`
 	Transformation string `json:"transformation,omitempty"`
+	Alphabet       string `json:"alphabet,omitempty"`
 }
 
 // Detokenize handles POST /v1/tokenize/decode
@@ -291,6 +294,7 @@ func (h *GatewayHandler) Detokenize(w http.ResponseWriter, r *http.Request) {
 		KeyName:        req.KeyName,
 		Ciphertext:     req.Token,
 		Transformation: req.Transformation,
+		Alphabet:       req.Alphabet,
 	})
 	if err != nil {
 		h.logger.Error("Detokenize failed", zap.Error(err))
